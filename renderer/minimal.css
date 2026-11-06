@@ -61,3 +61,44 @@ body{font-size:14px;color:var(--ink)}
 @media(max-width:1180px){.topbar{gap:12px;padding:0 15px}.brand{min-width:165px}.brand-copy strong{font-size:20px}#nav-main .nav-button{padding:9px}.firebase-status{display:none}}
 @media(max-width:850px){.topbar{height:auto;min-height:68px;flex-wrap:wrap;padding:10px 15px;gap:8px}.brand{min-width:auto}.top-actions{margin-left:auto}#nav-main{order:3;flex-basis:100%;justify-content:space-around}.period-dock{top:116px;padding:9px 15px}.period-focus{min-height:65px;padding:10px 15px;gap:12px;border-radius:20px}.period-caption{font-size:13px;padding-right:12px}.calendar-mark{width:37px;height:37px;font-size:19px}.period-focus select{font-size:15px}}
 @media(max-width:620px){.brand-copy small{display:none}.new-document{padding:8px 10px;font-size:11px}.topbar .top-actions{gap:0}#nav-main .nav-button{font-size:11px;padding:7px 4px}#nav-main .nav-icon{display:none}.period-dock{top:107px}.period-focus{flex-wrap:wrap;justify-content:stretch}.period-focus select{min-width:100%;font-size:16px}.period-caption{border:0;flex:1}.minimal-summary{gap:8px;margin:6px auto 22px}.summary-tile{font-size:13px;padding:10px;gap:7px;min-height:60px}.summary-tile strong{font-size:20px}.summary-symbol{width:30px;height:30px;font-size:15px}.accordion-trigger{padding:8px 11px;gap:9px}.accordion-count{font-size:10px;padding:5px}.accordion-name{font-size:12px}.accordion-documents{padding-left:16px}.accordion-document-name strong{font-size:11.5px}}
+
+/* v0.3.1 — listado denso y numeración ordinal + código institucional. */
+@media (min-width: 851px) {
+  .topbar { height: 62px; }
+  .brand .identity-mark { height: 38px; width: 38px; font-size: 20px; border-radius: 10px; }
+  .brand-copy strong { font-size: 20px; }
+  #nav-main .nav-button { min-height: 36px; padding: 6px 11px; }
+  .new-document { min-height: 37px; padding: 7px 13px; }
+  .period-dock { top: 62px; padding: 8px 20px; }
+  .period-focus { min-height: 62px; padding: 8px 22px; gap: 17px; border-radius: 19px; width: min(100%, 820px); }
+  .calendar-mark { width: 40px; height: 40px; font-size: 22px; }
+  .period-caption { padding-right: 17px; font-size: 16px; }
+  .period-focus select { font-size: clamp(16px,1.7vw,21px); padding: 5px 0; }
+  .content { padding-top: 10px; padding-bottom: 24px; }
+  .minimal-summary { gap: 12px; max-width: 650px; margin: 0 auto 12px; }
+  .summary-tile { min-height: 53px; padding: 8px 15px; font-size: 15px; gap: 11px; border-radius: 12px; }
+  .summary-tile strong { font-size: 22px; }
+  .summary-symbol { width: 31px; height: 31px; font-size: 17px; }
+  .process-heading { margin-bottom: 7px; }
+  .process-heading h1 { font-size: 17px; }
+  .accordion-list { gap: 5px; }
+  .accordion-process { border-radius: 9px; }
+  .accordion-trigger { min-height: 40px; padding: 4px 13px; gap: 12px; }
+  .accordion-count { font-size: 10px; padding: 4px 9px; }
+  .accordion-chevron { font-size: 17px; }
+  .accordion-documents { padding: 2px 14px 6px 51px; }
+  .accordion-document { min-height: 39px; padding: 5px 2px; }
+  .accordion-document-name strong { font-size: 12px; }
+}
+.accordion-number { display:grid; place-items:center; height:28px; width:30px; flex:none; border-radius:8px; background:#eef3ff; color:#245edf; font-size:12px; font-weight:800; font-variant-numeric:tabular-nums; }
+.accordion-info { display:flex; align-items:baseline; gap:12px; flex:1; min-width:0; }
+.accordion-name { min-width:0; }
+.accordion-code { font-size:11px; color:#7789a7; white-space:nowrap; font-weight:600; }
+@media (max-width:850px) {
+  .accordion-trigger { min-height:43px; padding:6px 11px; }
+  .accordion-number { width:28px; height:28px; font-size:11px; }
+  .accordion-info { gap:5px; flex-direction:column; align-items:flex-start; }
+  .accordion-code { font-size:10px; }
+  .accordion-count { padding:4px 8px; }
+}
+@media (max-width:620px) { .accordion-trigger { gap:8px; } .accordion-count { font-size:9px; } }
