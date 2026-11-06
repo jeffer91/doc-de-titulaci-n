@@ -20,6 +20,12 @@ const click=(action,id)=>callbacks.get('document:click')({target:{closest:()=>({
 assert.match(content(),/Procesos: <strong>9<\/strong>/);
 assert.match(content(),/Documentos: <strong>24<\/strong>/);
 assert.equal((content().match(/class="accordion-process /g)||[]).length,9);
+assert.match(content(),/UTET-PRO-56/);
+assert.match(content(),/UTET-PRO-95/);
+assert.match(content(),/class="accordion-number" aria-hidden="true">01</);
+assert.match(content(),/class="accordion-number" aria-hidden="true">09</);
+assert.doesNotMatch(content(),/Informe Final del Proceso de Titulación/, 'Los procesos deben iniciar plegados');
+click('toggle-proc','PRO-95');
 assert.match(content(),/Informe Final del Proceso de Titulación/);
 assert.equal((document.getElementById('period-select').innerHTML.match(/<option /g)||[]).length,6);
 const before=window.scrollY;
@@ -36,4 +42,4 @@ click('go-documents');
 assert.match(content(),/Borradores guardados/);
 assert.match(document.getElementById('nav-main').innerHTML,/Requisitos/);
 assert.match(document.getElementById('nav-main').innerHTML,/Configuración/);
-console.log('OK UI: menú horizontal, 6 períodos, 9 procesos, 24 documentos, acordeón y editor.');
+console.log('OK UI: diseño compacto, numeración 01-09 y códigos UTET-PRO, 6 períodos, 24 documentos y editor.');
