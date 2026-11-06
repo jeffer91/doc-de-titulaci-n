@@ -1,0 +1,39 @@
+'use strict';
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const path = require('node:path');
+const ROOT = path.join(__dirname, '..', 'renderer');
+const elements = new Map();
+const callbacks = new Map();
+const createElement = id => ({id,innerHTML:'',value:'',classList:{add(){},remove(){}},addEventListener(name,callback){callbacks.set(id+':'+name,callback);}});
+const document = {
+ getElementById(id){if(!elements.has(id))elements.set(id,createElement(id));return elements.get(id);},
+ addEventListener(name,callback){callbacks.set('document:'+name,callback);}
+};
+const saved = new Map();
+const window = {scrollY:157,scrollTo(x,y){this.scrollY=y}};
+const context=vm.createContext({window,document,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,val)=>saved.set(key,val)},setTimeout:()=>1,clearTimeout:()=>{},confirm:()=>true,Date,Math,console});
+for(const file of ['data.js','institutional.js','app.js']) vm.runInContext(fs.readFileSync(path.join(ROOT,file),'utf8'),context,{filename:file});
+const content=()=>document.getElementById('app-content').innerHTML;
+const click=(action,id)=>callbacks.get('document:click')({target:{closest:()=>({dataset:{action,id}})}});
+assert.match(content(),/Procesos: <strong>9<\/strong>/);
+assert.match(content(),/Documentos: <strong>24<\/strong>/);
+assert.equal((content().match(/class="accordion-process /g)||[]).length,9);
+assert.match(content(),/Informe Final del Proceso de Titulación/);
+assert.equal((document.getElementById('period-select').innerHTML.match(/<option /g)||[]).length,6);
+const before=window.scrollY;
+click('toggle-proc','PRO-56');
+assert.equal(window.scrollY,before,'El acordeón no debe saltar al inicio');
+assert.match(content(),/Planificación del Examen Complexivo/);
+assert.match(content(),/Planificación del Trabajo de Titulación/);
+assert.match(content(),/Planificación de Artículo Académico/);
+const type=window.UTET_DATA.procesos[0].documentos[0];
+click('new-doc',type.id);
+assert.match(content(),/VISTA PREVIA DE PÁGINAS A4/);
+assert.match(content(),/Guardar borrador/);
+click('go-documents');
+assert.match(content(),/Borradores guardados/);
+assert.match(document.getElementById('nav-main').innerHTML,/Requisitos/);
+assert.match(document.getElementById('nav-main').innerHTML,/Configuración/);
+console.log('OK UI: menú horizontal, 6 períodos, 9 procesos, 24 documentos, acordeón y editor.');
