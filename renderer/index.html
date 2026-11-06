@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'"/>
+  <title>UTET · Gestor Documental</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="identity"><div class="identity-mark">U<span>·</span></div><div><strong>UTET</strong><small>GESTIÓN DOCUMENTAL</small></div></div>
+      <div class="workspace-tag"><span class="tag-pulse"></span> Entorno de maqueta <span class="version">v0.1</span></div>
+      <div class="side-group-label">ESPACIO DE TRABAJO</div>
+      <nav id="nav-main" aria-label="Navegación principal"></nav>
+      <div class="side-group-label side-label-proc">DOCUMENTOS POR PROCESO</div>
+      <nav id="nav-processes" class="process-nav" aria-label="Procesos documentales"></nav>
+      <div class="side-footer"><div class="side-avatar">UT</div><div><strong>Unidad de Titulación</strong><small>ITSQMET · Datos de prueba</small></div><span class="footer-dots">···</span></div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar">
+        <div class="crumb" id="crumb">Área de trabajo <span>/</span> Inicio</div>
+        <div class="top-actions"><label class="period-holder"><span>Período académico</span><select id="period-select" aria-label="Período académico"></select></label><span class="offline-dot"></span><span class="offline-label">Sin conexión Firebase</span><button class="small-avatar" title="Maqueta local">UT</button></div>
+      </header>
+      <div class="demo-banner"><span class="demo-badge">MAQUETA</span><span>Diseño navegable: cifras agregadas del respaldo y borradores guardados solo en este equipo. No hay conexión ni escrituras en Firebase.</span><button id="banner-close" aria-label="Ocultar aviso">×</button></div>
+      <section id="app-content" class="content" tabindex="-1"></section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="data.js"></script><script src="app.js"></script>
+</body>
+</html>
