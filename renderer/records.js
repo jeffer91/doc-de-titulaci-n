@@ -78,7 +78,10 @@
   function uniqueKey(id,raw){
     const row=normalize(id,raw);
     // El identificador de referencia diferencia convocatorias y registros del mismo período.
-    return [id,row.referencia.toLocaleLowerCase('es'),row.cedula||row.carrera||''].join('|').toLocaleLowerCase('es');
+    // Los cronogramas admiten varias actividades por carrera y las convocatorias varias fechas.
+    const identity=[row.cedula||'',row.carrera||'',row.actividad||'',row.nucleo||'',
+      row.fechaInicio||'',row.fechaExamen||'',row.fechaEvento||'',row.fechaInduccion||''];
+    return [id,row.referencia,...identity].join('|').toLocaleLowerCase('es');
   }
   function toEditor(row,type,periodId,base) {
     const schemaFields=schema(type.id)||[];
