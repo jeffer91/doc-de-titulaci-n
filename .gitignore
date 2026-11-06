@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+.env
+.env.*
+!README.md
+*firebase-adminsdk*.json
+*serviceAccount*.json
+*.firebase-backup.json
+*.firebase-backup.txt
