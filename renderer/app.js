@@ -11,7 +11,7 @@
   const state = {
     view: 'inicio', periodId: DATA.periodos[0].id, proceso: 'todos', requisito: 'todos', estado: 'todos',
     selectedReq: 'Documentacion', search: '', carreraSearch: '',
-    documents: readStored(STORAGE), log: readStored(LOG_STORAGE), draft: null, bannerVisible: true
+    documents: readStored(STORAGE), log: readStored(LOG_STORAGE), draft: null, expandedProcess: 'PRO-95'
   };
   const $ = id => document.getElementById(id);
   const escape = val => String(val ?? '').replace(/[&<>"']/g, x => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[x]));
@@ -35,7 +35,7 @@
     state.log=state.log.slice(0,120);localStorage.setItem(LOG_STORAGE,JSON.stringify(state.log));
   };
   const persist = () => localStorage.setItem(STORAGE,JSON.stringify(state.documents));
-  const navItems = [ ['inicio','▦','Inicio'],['periodos','◫','Períodos'],['documentos','▤','Documentos'],['requisitos','☑','Requisitos'],['estudiantes','♙','Carreras y matrículas'],['historial','◷','Historial local'],['configuracion','⚙','Configuración'] ];
+  const navItems = [ ['inicio','⌂','Inicio'],['procesos','▱','Procesos'],['documentos','▤','Documentos'],['requisitos','☑','Requisitos'],['configuracion','⚙','Configuración'] ];
   const heading = (eyebrow,title,desc,actions='') => `<div class="head-row"><div><div class="eyebrow">${escape(eyebrow)}</div><h1 class="page-title">${escape(title)}</h1><p class="page-desc">${escape(desc)}</p></div><div class="toolbar">${actions}</div></div>`;
   const button = (action,text,extra='',classes='btn') => `<button class="${classes}" data-action="${action}" ${extra}>${text}</button>`;
   const tiny = (key,value) => `<span class="mini-tag">${escape(key)}: ${escape(value)}</span>`;
@@ -45,23 +45,20 @@
     return `<${interactive?'button':'div'} class="req-line" ${interactive?`data-action="req-pick" data-id="${escape(key)}"`:''}><div class="req-meta"><span>${escape(reqName(key))}</span><span>${pct}%</span></div><div class="bar"><span class="${cls}" style="width:${pct}%"></span></div></${interactive?'button':'div'}>`;
   };
   const metric = (label,value,detail,icon) => `<div class="metric"><div class="metric-top"><span class="metric-label">${escape(label)}</span><span class="metric-icon">${icon}</span></div><strong>${escape(value)}</strong><div class="metric-sub">${escape(detail)}</div></div>`;
-  const listProcess = p => `<button class="process-item" data-action="set-proc" data-id="${p.id}"><span class="process-symbol">▤</span><span class="process-text"><strong>${escape(p.nombre)}</strong><small>${p.id} · ${escape(p.categoria)}</small></span><span class="process-count">${p.documentos.length} docs</span><span class="process-chevron">›</span></button>`;
-  const renderInicio = () => {
-    const p=period(), stats=getStats(), local=docsPeriod(), reqKeys=['Documentacion','Academico','Financiero','Titulacion','AprobacionTitulacion'];
-    return heading('Resumen del período','Panel de titulación',`Vista general de ${p.label}. Indicadores agregados del respaldo, no en tiempo real.`,button('go-documents','＋ Crear documento','', 'btn btn-primary'))+
-    `<div class="grid-four">${metric('Matrículas del período',fmt(p.matriculas),'Registros activos del respaldo','♙')}${metric('Requisitos registrados',fmt(p.requisitos),'Fichas del período','☑')}${metric('Cumplimiento promedio',stats.pct+'%','Promedio de los 11 requisitos','◔')}${metric('Documentos locales',fmt(local.length),'Borradores y pruebas creadas','▤')}</div>`+
-    `<div class="panels"><div class="panel"><div class="panel-header"><div><h2>Documentos por proceso</h2><p>9 procesos · 24 registros documentales disponibles</p></div>${button('go-documents','Ver catálogo →','','text-link')}</div><div class="process-list">${PROCESOS.map(listProcess).join('')}</div></div><div class="panel"><div class="panel-header"><div><h2>Estado de los requisitos</h2><p>Cumplimiento agregado por categoría</p></div>${button('go-requirements','Ver todos →','','text-link')}</div><div class="req-list">${reqKeys.map(key=>reqBar(key)).join('')}<div class="hint-box"><strong>Primero el período, después el requisito.</strong><br/>Al cambiar el período se actualizan automáticamente los indicadores, los documentos guardados y los filtros. Cada requisito muestra los generadores documentales relacionados.</div></div></div></div>`+
-    `<h2 class="section-title">Accesos rápidos</h2><div class="toolbar">${button('go-requirements','☑ Revisar requisitos')}${button('go-documents','▤ Crear documento')}${button('go-periodos','◫ Cambiar período')}${button('go-history','◷ Ver historial local')}</div>`;
+  const accordionProcess = p => {
+    const expanded = state.expandedProcess===p.id;
+    return `<article class="accordion-process ${expanded?'expanded':''}"><button type="button" class="accordion-trigger" data-action="toggle-proc" data-id="${escape(p.id)}" aria-expanded="${expanded}" aria-controls="docs-${escape(p.id)}"><span class="accordion-symbol" aria-hidden="true">▱</span><span class="accordion-name">${escape(p.nombre)}</span><span class="accordion-count">${p.documentos.length} ${p.documentos.length===1?'documento':'documentos'}</span><span class="accordion-chevron" aria-hidden="true">⌄</span></button>${expanded?`<div class="accordion-documents" id="docs-${escape(p.id)}">${p.documentos.map(d=>`<div class="accordion-document"><span class="doc-mark" aria-hidden="true">▤</span><div class="accordion-document-name"><strong>${escape(d.nombre)}</strong><small>${escape(d.codigo)}</small></div>${button('new-doc','Crear',`data-id="${escape(d.id)}"`,'btn btn-small')}</div>`).join('')}</div>`:''}</article>`;
   };
+  const renderInicio = () => `<div class="minimal-home"><div class="minimal-summary"><div class="summary-tile"><span class="summary-symbol">▱</span><span>Procesos: <strong>${PROCESOS.length}</strong></span></div><div class="summary-tile"><span class="summary-symbol">▤</span><span>Documentos: <strong>${TIPOS.length}</strong></span></div></div><div class="process-heading"><h1>Procesos</h1><button type="button" class="subtle-link" data-action="go-requirements">Ver requisitos</button></div><div class="accordion-list">${PROCESOS.map(accordionProcess).join('')}</div></div>`;
   const docRows = docs => docs.map(d => `<div class="doc-item"><div class="doc-icon">▤</div><div class="doc-detail"><strong>${escape(d.nombre)}</strong><small>${escape(d.codigo)}</small><div style="margin-top:5px"><span class="inst-family-tag">${escape(INST.families[INST.familyFor(d)].label)}</span></div><div style="margin-top:8px"><span class="mini-tag purple">${escape(reqName(d.requisito))}</span></div></div><div class="doc-actions">${button('new-doc','＋ Crear',`data-id="${d.id}"`,'btn btn-primary btn-small')}</div></div>`).join('');
   const docRelated = (d,key) => key==='todos'||d.requisito===key||d.proceso==='PRO-58';
   const renderDocumentos = () => {
     const options=(values,current)=>values.map(v=>`<option value="${escape(v[0])}" ${v[0]===current?'selected':''}>${escape(v[1])}</option>`).join('');
     const groups=PROCESOS.map(p=>({ ...p, documentos:p.documentos.filter(d=>(state.proceso==='todos'||d.proceso===state.proceso)&&docRelated(d,state.requisito)&&(!state.search|| (d.nombre+' '+d.codigo+' '+p.nombre).toLowerCase().includes(state.search.toLowerCase()))) })).filter(p=>p.documentos.length);
     const saved=docsPeriod().filter(d=>(state.estado==='todos'||d.estado===state.estado)&&(!state.search||(d.asunto+' '+typeById(d.tipoId)?.nombre).toLowerCase().includes(state.search.toLowerCase())));
-    return heading('Biblioteca documental','Generadores de documentos','Selecciona el período, filtra por requisito o proceso y abre una plantilla editable. La vista previa incorpora las portadas y correspondencia de los formatos aportados; los cuerpos documentales aún deben validarse.',button('go-history','◷ Ver borradores'))+
+    return heading('','Documentos','',button('go-history','Borradores guardados'))+
     `<div class="filter-row"><input class="input" id="doc-search" placeholder="Buscar nombre o código..." value="${escape(state.search)}" aria-label="Buscar documentos"/><button class="btn btn-small" data-action="apply-search">Buscar</button><select class="select" id="filter-process" aria-label="Filtrar proceso">${options([['todos','Todos los procesos'],...PROCESOS.map(p=>[p.id,p.id+' · '+p.nombre])],state.proceso)}</select><select class="select" id="filter-requirement" aria-label="Filtrar requisito">${options([['todos','Todos los requisitos'],...REQUISITOS.map(r=>[r.id,r.nombre])],state.requisito)}</select>${button('clear-filters','Limpiar filtros','','btn btn-small')}</div>`+
-    `<div class="hint-box" style="margin:0 0 17px">La relación documento–requisito es <strong>referencial para esta maqueta</strong>. Los tres documentos de seguimiento (PRO-58) se ofrecen para cualquiera de los 11 requisitos. Los contenidos definitivos se configurarán con las plantillas institucionales que entregues.</div>`+
+
     `${groups.length?groups.map(p=>`<section class="catalog-group"><div class="catalog-title"><h3>${escape(p.nombre)} <small>· ${p.id}</small></h3><span class="mini-tag">${p.documentos.length} documento(s)</span></div>${docRows(p.documentos)}</section>`).join(''):'<div class="empty"><strong>No hay plantillas con estos filtros</strong><p>Cambia el proceso o el requisito.</p></div>'}`+
     `<h2 class="section-title">Documentos creados para este período (${saved.length})</h2><div class="panel">${saved.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Documento</th><th>Proceso</th><th>Estado local</th><th>Modificado</th><th>Acciones</th></tr></thead><tbody>${saved.map(d=>`<tr><td><strong>${escape(d.asunto)}</strong><br><small>${escape(typeById(d.tipoId)?.codigo||'')}</small></td><td>${escape(typeById(d.tipoId)?.proceso||'')}</td><td><span class="tag-status ${statusClass(d.estado)}">${escape(d.estado)}</span></td><td>${escape(niceDate(d.updatedAt))}</td><td>${button('edit-doc','Abrir',`data-id="${escape(d.id)}"`,'btn btn-small')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><span class="empty-icon">▤</span><strong>Todavía no hay borradores</strong><p>Elige cualquiera de los 24 tipos documentales y crea un primer borrador de prueba para este período.</p></div>'}</div>`;
   };
@@ -122,13 +119,10 @@
     return heading('Documentos / formato institucional',t.nombre,`${t.proceso} · ${t.codigo} · ${DATA.periodos.find(p=>p.id===d.periodId)?.label||''}`,button('go-documents','← Volver al catálogo'))+
     `<div class="two-col"><div class="form-card"><div class="eyebrow">DATOS DEL DOCUMENTO · <span class="inst-family-tag">${escape(info.label)}</span></div>${!info.authoritative?'<div class="inst-example-note">Solo hay referencia parcial del formato. No utilices esta vista como acta oficial ni como modelo definitivo del cuerpo del documento.</div>':''}<div class="inst-fields-grid">${fInput('asunto','Título o asunto',d.asunto,true)}${fInput('fecha','Fecha de elaboración / reunión',d.fecha,false,'type="date"')}<div class="field"><label for="f-carrera">Carrera</label><select class="select" id="f-carrera" data-field="carrera"><option value="">Todas / sin definir</option>${careers.map(c=>`<option value="${escape(c.nombre)}" ${d.carrera===c.nombre?'selected':''}>${escape(c.nombre)}</option>`).join('')}</select></div></div>${detailsFor(d,t)}<div class="inst-fields-group"><h3>Cuerpo y observaciones</h3>${fArea('contenido','Contenido editable',d.contenido,true,'Texto de prueba; se reemplazará por las tablas/secciones específicas al incorporar el documento terminado.')}${fArea('observaciones','Observaciones',d.observaciones)}</div><span class="tag-status ${statusClass(d.estado)}">${escape(d.estado)} · solo prueba</span><div class="inst-validation" id="institutional-validation">${validationHTML(d,t)}</div></div><div class="preview-card"><div class="inst-preview-toolbar"><span>VISTA PREVIA DE PÁGINAS A4</span><span>${escape(info.label)}</span></div><div class="inst-preview" id="print-preview">${previewHTML(d)}</div></div></div><div class="editor-footer"><small>Portada normalizada · PDF de maqueta; Firebase sigue desconectado.</small>${button('save-doc','Guardar borrador')}${button('review-doc','Simular revisión')}${button('pdf-doc','↓ Exportar PDF de maqueta','','btn btn-primary')}</div>`;
   };
-  const activeLabel = () => ({inicio:'Inicio',periodos:'Períodos académicos',documentos:'Documentos',requisitos:'Requisitos',estudiantes:'Carreras y matrículas',historial:'Historial local',configuracion:'Configuración',editor:'Editar documento'}[state.view]||'Inicio');
   function render() {
-    $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button class="nav-button ${state.view===id||(state.view==='editor'&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon">${icon}</span><span class="nav-text">${escape(title)}</span>${id==='documentos'?'<span class="mini-count">24</span>':''}</button>`).join('');
-    $('nav-processes').innerHTML=PROCESOS.map(p=>`<button class="nav-button ${state.view==='documentos'&&state.proceso===p.id?'active':''}" data-action="set-proc" data-id="${p.id}" title="${escape(p.nombre)}"><span class="nav-icon">·</span><span class="nav-text">${escape(p.nombre)}</span><span class="mini-count">${p.documentos.length}</span></button>`).join('');
-    $('period-select').innerHTML=DATA.periodos.map(p=>`<option value="${p.id}" ${p.id===state.periodId?'selected':''}>${escape(p.label)}</option>`).join('');
-    $('crumb').innerHTML=`Espacio de trabajo <span>/</span> <b>${escape(activeLabel())}</b>`;
-    const contents={inicio:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,editor:renderEditor};
+    $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button type="button" class="nav-button ${state.view===id||(id==='procesos'&&state.view==='inicio')||(state.view==='editor'&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-text">${escape(title)}</span></button>`).join('');
+    $('period-select').innerHTML=DATA.periodos.map(p=>`<option value="${escape(p.id)}" ${p.id===state.periodId?'selected':''}>${escape(p.label)}</option>`).join('');
+    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,editor:renderEditor};
     $('app-content').innerHTML=(contents[state.view]||renderInicio)();
     window.scrollTo(0,0);
   }
@@ -148,6 +142,7 @@
     const a=target.dataset.action,id=target.dataset.id;
     if(a==='go-documents'){state.proceso='todos';state.requisito='todos';go('documentos');}
     else if(a==='go-requirements')go('requisitos');
+    else if(a==='toggle-proc'){state.expandedProcess=state.expandedProcess===id?null:id;render();}
     else if(a==='go-periodos')go('periodos');
     else if(a==='go-history')go('historial');
     else if(a==='set-proc'){state.proceso=id;state.requisito='todos';go('documentos');}
@@ -179,7 +174,6 @@
     }catch(err){showToast('No fue posible exportar el PDF: '+(err?.message||'Error'));}
   }
   $('period-select').addEventListener('change', e => {state.periodId=e.target.value;state.draft=null;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');});
-  $('banner-close').addEventListener('click',()=>{$('banner-close').parentElement.classList.add('hidden');state.bannerVisible=false;});
   document.addEventListener('click',handleClick);
   $('app-content').addEventListener('change',e=>{
     if(e.target.id==='filter-process'){state.proceso=e.target.value;render();}
