@@ -1,51 +1,52 @@
-# Doc de Titulación — Maqueta UTET
+# Doc de Titulación · UTET (maqueta Electron v0.2)
 
-Maqueta **navegable** de una aplicación de escritorio Electron para la Unidad de Titulación y Eficiencia Terminal (ITSQMET), organizada por **período académico**, **requisitos** y **procesos/documentos**.
+Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
 
-## Arrancar
+## Arranque local
 
-Se requiere Node.js 20 o superior y conexión a Internet la primera vez para instalar Electron.
+Necesita Node.js 20 o superior y acceso a Internet al instalar Electron por primera vez.
 
 ```bash
 npm install
 npm start
 ```
 
-Para revisar sintaxis de los archivos JavaScript:
+Pruebas automáticas de catálogo, familias y portadas:
 
 ```bash
 npm run check
+npm test
 ```
 
-## Contenido de la maqueta
+## Cambios de la v0.2: formatos institucionales
 
-- Seis períodos del respaldo proporcionado el 6 de noviembre de 2026, con **indicadores agregados sin información personal**.
-- Once campos de requisitos, con filtros, porcentajes, estado de cumplimiento y sus documentos relacionados.
-- Nueve procesos y exactamente **24 registros documentales** aprobados por la UTET, con sus códigos.
-- Listado documental y filtro por proceso, requisito, estado y período.
-- Editor demostrativo de documentos con vista previa, campos manuales, borradores y simulación de estados.
-- PDF real de la vista previa desde Electron (impresión local).
-- Historial de acciones de demostración, guardado en el almacenamiento local de la aplicación.
+- Portadas **RGI / INF / ACT** conforme a la *Guía de estandarización de portadas institucionales ITSQMET v1.1* (octubre de 2026): **A4**, márgenes de **1,5 cm**, tablas de **18 cm** y anchos específicos para cada familia; tipografía Arial, encabezados con celdas combinadas, bloque de firmas de tres columnas **solo en la primera hoja**.
+- Encabezados **RGI**: tres columnas (4,5 / 9 / 4,5 cm), dos filas. **INF**: 4,8 / 9,5 / 3,7 cm, tres filas. **ACT**: 5,2 / 7,6 / 5,2 cm, tres filas.
+- Firmantes por defecto **solo para RGI e INF**: Mgs. Jefferson Villarreal (UTET), Ing. Martha Tomalá y Dr. Alex León; datos configurables por documento. ACT deja firmantes variables.
+- Correspondencia **OFI / MEM / COM** con campos editables tomados de las muestras institucionales. El certificado CERT aportado como referencia **no se añade al catálogo** de 24 registros.
+- Registro de **asistencia a inducción** con tema, fecha, capacitador, jefe inmediato y tabla de asistentes verificados en páginas con numeración continua.
+- Distinción explícita entre la **portada ACT de reunión** y el cuerpo, todavía pendiente, del acta de seguimiento UTET-PRO-58. Las **actas de titulación AT** y el **Plan de Estudios del Núcleo Complexivo** siguen con aviso de formato específico pendiente.
+- Validación visible de campos y de códigos que contengan marcadores `0X`, `20XX`, `AÑO`, `MES`, etc. Los códigos de referencia del manual no se convierten automáticamente en folios definitivos.
+- Exportación de **PDF de maqueta** desde una ventana aislada de Electron que imprime únicamente el documento (no la navegación), con sello visible **«MAQUETA · DOCUMENTO NO APROBADO»**.
 
-## Alcance y límites de esta versión
+## Limitaciones intencionales
 
-**MAQUETA / DATOS DE PRUEBA.** No se conecta a Firebase y **no modifica** ningún dato institucional. Los indicadores corresponden a un resumen estadístico local del respaldo, no a una lectura en tiempo real. Los nombres de ejemplo (si se muestran) no corresponden a personas reales. Los borradores y las aprobaciones simuladas se guardan solo en el equipo mediante `localStorage` y no constituyen actos oficiales.
+**Esta versión es una maqueta.** Los campos de cada documento real se completarán conforme a las plantillas que suministre la unidad. La paginación de contenido se efectúa por bloques para la vista previa; todavía falta validación visual de los formatos definitivos, especialmente con tablas extensas. Los PDF tienen valor de muestra, **no son actas ni aprobaciones oficiales**. Las firmas son espacios sin imágenes ni certificados electrónicos.
 
-Las plantillas aún son provisionales: el usuario entregará las versiones institucionales para configurar contenido, requisitos, firmas, formatos y automatización. La generación de DOCX y la autenticación/sincronización Firestore quedan para una etapa posterior.
+La app no conecta aún a Firebase, no ejecuta escrituras y no incorpora registros personales del respaldo. Sus métricas son **resúmenes agregados** suministrados previamente, no lecturas en tiempo real. Borradores y revisiones simuladas permanecen en `localStorage` del equipo.
 
-No se incluyen datos personales ni credenciales administrativas en este repositorio público.
+**DOCX y XLSX** no se exportan todavía: se añadirán tras integrar las plantillas oficiales de cada registro. El `npm install` no pudo concluir en el entorno de pruebas de esta sesión; sí se verificó la sintaxis de los archivos y el motor mediante pruebas de Node.js.
 
 ## Estructura
 
-- `electron/main.js`: proceso principal y exportación a PDF.
-- `electron/preload.js`: API restringida expuesta a la interfaz.
-- `renderer/index.html`: estructura del escritorio.
-- `renderer/styles.css`: diseño adaptable e impresión.
+- `electron/main.js`: ventana Electron y exportación aislada de PDF.
+- `electron/preload.js`: puente IPC restringido.
+- `renderer/index.html`, `renderer/styles.css`, `renderer/app.js`: navegación y formularios de la maqueta.
+- `renderer/institutional.js`, `renderer/institutional.css`: motor de formatos, reglas de portada, vista previa y validaciones.
+- `renderer/assets/logo-itsqmet.png`: imagen institucional tomada de las plantillas proporcionadas.
 - `renderer/data.js`: catálogo y estadísticas agregadas anonimizadas.
-- `renderer/app.js`: navegación, formularios, filtros y guardado local.
+- `tests/institutional.test.cjs`: pruebas del catálogo, tipologías, firmas y asistencia.
 
-## Datos Firebase que servirán más adelante
+## Próxima etapa
 
-Proyecto `utet-4387a`; colecciones observadas en el respaldo: `Estudiante`, `carreras`, `historial`, `importaciones`, `matriculas`, `periodos` y `requisitos`. Cada matrícula y sus requisitos se relacionan por `cedula + periodoId`. Algunos campos pueden faltar: no se deben inventar notas, modalidades ni aprobaciones.
-
-**No modificar en producción** `Estudiante`, `matriculas`, `requisitos` o colecciones de otras aplicaciones sin una especificación y reglas de acceso aprobadas.
+Incorporar, uno por uno, los documentos reales previamente aprobados para completar su cuerpo, tablas, distribución, numeración y automatización desde Firebase, respetando las reglas de seguridad y el control documental de ITSQMET.

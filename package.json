@@ -1,12 +1,13 @@
 {
   "name": "doc-de-titulacion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Maqueta Electron de gestión documental UTET por período y requisitos",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check electron/main.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/data.js"
+    "check": "node --check electron/main.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js",
+    "test": "node tests/institutional.test.cjs"
   },
   "devDependencies": {
     "electron": "^38.0.0"
