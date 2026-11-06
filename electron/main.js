@@ -2,6 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const Excel = require('./excel.js');
 
 const ROOT = path.join(__dirname, '..');
 const RENDERER = path.join(ROOT, 'renderer');
@@ -84,6 +85,8 @@ async function savePDF(event, input) {
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);
   ipcMain.handle('utet:save-pdf',savePDF);
+  ipcMain.handle('utet:excel-template',(event,spec)=>{verifySender(event);return Excel.downloadTemplate(event,spec);});
+  ipcMain.handle('utet:excel-import',(event,spec)=>{verifySender(event);return Excel.importWorkbook(event,spec);});
   createWindow();
   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});
 });
