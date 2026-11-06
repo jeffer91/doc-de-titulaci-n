@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (maqueta Electron v0.3.1)
+# Doc de Titulación · UTET (maqueta Electron v0.4.0)
 
 Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
 
@@ -18,6 +18,17 @@ npm run check
 npm test
 ```
 
+## Cambios de la v0.4: formularios, Excel y tablas para los 24 documentos
+
+- Cada documento abre su propia **tabla por período académico** desde Inicio o el catálogo.
+- **Formulario** para agregar o editar filas individuales; la tabla permanece visible y admite búsqueda y eliminación.
+- **Descargar plantilla Excel (.xlsx)**: columnas propias del documento, hojas de datos e instrucciones, formatos de texto y listas de opciones cuando corresponda.
+- **Cargar Excel (.xlsx)**: comprobación de encabezados y tipos, vista previa de filas nuevas, duplicadas o erróneas; confirmar con opción de omitir o actualizar duplicados.
+- El formulario y Excel comparten **el mismo almacenamiento local**, no generan bases separadas.
+- Desde una fila se puede **preparar un documento de maqueta** en el editor existente, o preparar un consolidado con los registros de la tabla.
+- Se mantiene el carácter provisional del contenido documental: no se asignan folios ni firmas ni actas oficiales; Firebase aún desconectado.
+- Los datos cargados localmente, especialmente nombres y cédulas, **no deben utilizarse en equipos compartidos** hasta contar con almacenamiento y permisos institucionales apropiados.
+
 ## Cambios de la v0.3.1: interfaz más compacta
 
 - Procesos numerados del **01 al 09**, mostrando también sus códigos oficiales (`UTET-PRO-56`, etc.).
@@ -30,7 +41,7 @@ npm test
 - Menú horizontal permanente con Inicio, Procesos, Documentos, Requisitos y Configuración; se eliminó el menú lateral.
 - Selector de período académico resaltado y fijo en la parte superior en todas las pantallas.
 - Inicio con únicamente los indicadores **9 procesos** y **24 documentos**, más un listado desplegable de procesos y sus documentos reales.
-- Cada documento se puede abrir en el editor existente mediante **Crear**.
+- Cada documento ahora abre su tabla editable mediante **Datos / Abrir tabla**.
 - Se mantienen los borradores locales, filtros por requisito, vista previa y exportación de PDF de maqueta.
 - Firebase continúa desconectado y no se escriben datos académicos.
 
@@ -51,17 +62,20 @@ npm test
 
 La app no conecta aún a Firebase, no ejecuta escrituras y no incorpora registros personales del respaldo. Sus métricas son **resúmenes agregados** suministrados previamente, no lecturas en tiempo real. Borradores y revisiones simuladas permanecen en `localStorage` del equipo.
 
-**DOCX y XLSX** no se exportan todavía: se añadirán tras integrar las plantillas oficiales de cada registro. El `npm install` no pudo concluir en el entorno de pruebas de esta sesión; sí se verificó la sintaxis de los archivos y el motor mediante pruebas de Node.js.
+**Plantillas XLSX**: ya se pueden descargar y cargar. La exportación de documentos terminados en DOCX, la exportación de registros a Excel y el contenido oficial de cada documento siguen pendientes de implementar. El `npm install` no pudo concluir en el entorno de pruebas de esta sesión; sí se verificó la sintaxis de los archivos y el motor mediante pruebas de Node.js.
 
 ## Estructura
 
 - `electron/main.js`: ventana Electron y exportación aislada de PDF.
 - `electron/preload.js`: puente IPC restringido.
+- `electron/excel.js`: descarga y lectura de plantillas XLSX con ExcelJS.
+- `renderer/records.js`: campos específicos, validación y preparación de borradores para los 24 tipos.
+- `renderer/records-ui.js`, `renderer/records.css`: formularios, tabla editable e importación confirmada.
 - `renderer/index.html`, `renderer/styles.css`, `renderer/app.js`: navegación y formularios de la maqueta.
 - `renderer/institutional.js`, `renderer/institutional.css`: motor de formatos, reglas de portada, vista previa y validaciones.
 - `renderer/assets/logo-itsqmet.png`: imagen institucional tomada de las plantillas proporcionadas.
 - `renderer/data.js`: catálogo y estadísticas agregadas anonimizadas.
-- `tests/institutional.test.cjs`: pruebas del catálogo, tipologías, firmas y asistencia.
+- `tests/institutional.test.cjs`, `tests/records.test.cjs` y `tests/ui.test.cjs`: pruebas del catálogo, tipologías, formularios y navegación.
 
 ## Próxima etapa
 
