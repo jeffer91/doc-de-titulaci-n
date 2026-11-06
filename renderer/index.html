@@ -7,28 +7,35 @@
   <title>UTET · Gestor Documental</title>
   <link rel="stylesheet" href="styles.css"/>
   <link rel="stylesheet" href="institutional.css"/>
+  <link rel="stylesheet" href="minimal.css"/>
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
-      <div class="identity"><div class="identity-mark">U<span>·</span></div><div><strong>UTET</strong><small>GESTIÓN DOCUMENTAL</small></div></div>
-      <div class="workspace-tag"><span class="tag-pulse"></span> Entorno de maqueta <span class="version">v0.2</span></div>
-      <div class="side-group-label">ESPACIO DE TRABAJO</div>
+    <header class="topbar">
+      <div class="brand" aria-label="UTET Gestor Documental">
+        <div class="identity-mark">U<span>·</span></div>
+        <div class="brand-copy"><strong>UTET</strong><small>Gestor Documental</small></div>
+      </div>
       <nav id="nav-main" aria-label="Navegación principal"></nav>
-      <div class="side-group-label side-label-proc">DOCUMENTOS POR PROCESO</div>
-      <nav id="nav-processes" class="process-nav" aria-label="Procesos documentales"></nav>
-      <div class="side-footer"><div class="side-avatar">UT</div><div><strong>Unidad de Titulación</strong><small>ITSQMET · Datos de prueba</small></div><span class="footer-dots">···</span></div>
-    </aside>
+      <div class="top-actions">
+        <span class="firebase-status"><span class="offline-dot" aria-hidden="true"></span>Sin conexión Firebase</span>
+        <button type="button" class="btn btn-primary new-document" data-action="go-documents">＋ Nuevo documento</button>
+      </div>
+    </header>
+    <div class="period-dock">
+      <label class="period-focus" for="period-select">
+        <span class="calendar-mark" aria-hidden="true">▦</span>
+        <span class="period-caption">Período académico</span>
+        <select id="period-select" aria-label="Seleccionar período académico"></select>
+      </label>
+    </div>
     <main class="main-area">
-      <header class="topbar">
-        <div class="crumb" id="crumb">Área de trabajo <span>/</span> Inicio</div>
-        <div class="top-actions"><label class="period-holder"><span>Período académico</span><select id="period-select" aria-label="Período académico"></select></label><span class="offline-dot"></span><span class="offline-label">Sin conexión Firebase</span><button class="small-avatar" title="Maqueta local">UT</button></div>
-      </header>
-      <div class="demo-banner"><span class="demo-badge">MAQUETA</span><span>Diseño navegable: cifras agregadas del respaldo y borradores guardados solo en este equipo. No hay conexión ni escrituras en Firebase.</span><button id="banner-close" aria-label="Ocultar aviso">×</button></div>
       <section id="app-content" class="content" tabindex="-1"></section>
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="data.js"></script><script src="institutional.js"></script><script src="app.js"></script>
+  <script src="data.js"></script>
+  <script src="institutional.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
