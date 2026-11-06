@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (maqueta Electron v0.2)
+# Doc de Titulación · UTET (maqueta Electron v0.3)
 
 Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
 
@@ -18,7 +18,16 @@ npm run check
 npm test
 ```
 
-## Cambios de la v0.2: formatos institucionales
+## Cambios de la v0.3: diseño minimalista
+
+- Menú horizontal permanente con Inicio, Procesos, Documentos, Requisitos y Configuración; se eliminó el menú lateral.
+- Selector de período académico resaltado y fijo en la parte superior en todas las pantallas.
+- Inicio con únicamente los indicadores **9 procesos** y **24 documentos**, más un listado desplegable de procesos y sus documentos reales.
+- Cada documento se puede abrir en el editor existente mediante **Crear**.
+- Se mantienen los borradores locales, filtros por requisito, vista previa y exportación de PDF de maqueta.
+- Firebase continúa desconectado y no se escriben datos académicos.
+
+## Formatos institucionales incorporados en v0.2
 
 - Portadas **RGI / INF / ACT** conforme a la *Guía de estandarización de portadas institucionales ITSQMET v1.1* (octubre de 2026): **A4**, márgenes de **1,5 cm**, tablas de **18 cm** y anchos específicos para cada familia; tipografía Arial, encabezados con celdas combinadas, bloque de firmas de tres columnas **solo en la primera hoja**.
 - Encabezados **RGI**: tres columnas (4,5 / 9 / 4,5 cm), dos filas. **INF**: 4,8 / 9,5 / 3,7 cm, tres filas. **ACT**: 5,2 / 7,6 / 5,2 cm, tres filas.
