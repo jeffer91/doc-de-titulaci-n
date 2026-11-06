@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "check": "node --check electron/main.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js",
-    "test": "node tests/institutional.test.cjs"
+    "test": "node tests/institutional.test.cjs && node tests/ui.test.cjs"
   },
   "devDependencies": {
     "electron": "^38.0.0"
