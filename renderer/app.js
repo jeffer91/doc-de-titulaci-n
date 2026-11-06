@@ -48,10 +48,10 @@
   const accordionProcess = (p, index) => {
     const expanded = state.expandedProcess===p.id;
     const numero = String(index + 1).padStart(2, '0');
-    return `<article class="accordion-process ${expanded?'expanded':''}"><button type="button" class="accordion-trigger" data-action="toggle-proc" data-id="${escape(p.id)}" aria-expanded="${expanded}" aria-controls="docs-${escape(p.id)}"><span class="accordion-number" aria-hidden="true">${numero}</span><span class="accordion-info"><span class="accordion-name">${escape(p.nombre)}</span><span class="accordion-code">UTET-${escape(p.id)}</span></span><span class="accordion-count">${p.documentos.length} ${p.documentos.length===1?'documento':'documentos'}</span><span class="accordion-chevron" aria-hidden="true">⌄</span></button>${expanded?`<div class="accordion-documents" id="docs-${escape(p.id)}">${p.documentos.map(d=>`<div class="accordion-document"><span class="doc-mark" aria-hidden="true">▤</span><div class="accordion-document-name"><strong>${escape(d.nombre)}</strong><small>${escape(d.codigo)}</small></div>${button('new-doc','Crear',`data-id="${escape(d.id)}"`,'btn btn-small')}</div>`).join('')}</div>`:''}</article>`;
+    return `<article class="accordion-process ${expanded?'expanded':''}"><button type="button" class="accordion-trigger" data-action="toggle-proc" data-id="${escape(p.id)}" aria-expanded="${expanded}" aria-controls="docs-${escape(p.id)}"><span class="accordion-number" aria-hidden="true">${numero}</span><span class="accordion-info"><span class="accordion-name">${escape(p.nombre)}</span><span class="accordion-code">UTET-${escape(p.id)}</span></span><span class="accordion-count">${p.documentos.length} ${p.documentos.length===1?'documento':'documentos'}</span><span class="accordion-chevron" aria-hidden="true">⌄</span></button>${expanded?`<div class="accordion-documents" id="docs-${escape(p.id)}">${p.documentos.map(d=>`<div class="accordion-document"><span class="doc-mark" aria-hidden="true">▤</span><div class="accordion-document-name"><strong>${escape(d.nombre)}</strong><small>${escape(d.codigo)}</small></div>${button('rec-open','Datos',`data-id="${escape(d.id)}"`,'btn btn-small')}</div>`).join('')}</div>`:''}</article>`;
   };
   const renderInicio = () => `<div class="minimal-home"><div class="minimal-summary"><div class="summary-tile"><span class="summary-symbol">▱</span><span>Procesos: <strong>${PROCESOS.length}</strong></span></div><div class="summary-tile"><span class="summary-symbol">▤</span><span>Documentos: <strong>${TIPOS.length}</strong></span></div></div><div class="process-heading"><h1>Procesos</h1><button type="button" class="subtle-link" data-action="go-requirements">Ver requisitos</button></div><div class="accordion-list">${PROCESOS.map(accordionProcess).join('')}</div></div>`;
-  const docRows = docs => docs.map(d => `<div class="doc-item"><div class="doc-icon">▤</div><div class="doc-detail"><strong>${escape(d.nombre)}</strong><small>${escape(d.codigo)}</small><div style="margin-top:5px"><span class="inst-family-tag">${escape(INST.families[INST.familyFor(d)].label)}</span></div><div style="margin-top:8px"><span class="mini-tag purple">${escape(reqName(d.requisito))}</span></div></div><div class="doc-actions">${button('new-doc','＋ Crear',`data-id="${d.id}"`,'btn btn-primary btn-small')}</div></div>`).join('');
+  const docRows = docs => docs.map(d => `<div class="doc-item"><div class="doc-icon">▤</div><div class="doc-detail"><strong>${escape(d.nombre)}</strong><small>${escape(d.codigo)}</small><div style="margin-top:5px"><span class="inst-family-tag">${escape(INST.families[INST.familyFor(d)].label)}</span></div><div style="margin-top:8px"><span class="mini-tag purple">${escape(reqName(d.requisito))}</span></div></div><div class="doc-actions">${button('rec-open','Abrir tabla',`data-id="${d.id}"`,'btn btn-primary btn-small')}</div></div>`).join('');
   const docRelated = (d,key) => key==='todos'||d.requisito===key||d.proceso==='PRO-58';
   const renderDocumentos = () => {
     const options=(values,current)=>values.map(v=>`<option value="${escape(v[0])}" ${v[0]===current?'selected':''}>${escape(v[1])}</option>`).join('');
@@ -121,9 +121,9 @@
     `<div class="two-col"><div class="form-card"><div class="eyebrow">DATOS DEL DOCUMENTO · <span class="inst-family-tag">${escape(info.label)}</span></div>${!info.authoritative?'<div class="inst-example-note">Solo hay referencia parcial del formato. No utilices esta vista como acta oficial ni como modelo definitivo del cuerpo del documento.</div>':''}<div class="inst-fields-grid">${fInput('asunto','Título o asunto',d.asunto,true)}${fInput('fecha','Fecha de elaboración / reunión',d.fecha,false,'type="date"')}<div class="field"><label for="f-carrera">Carrera</label><select class="select" id="f-carrera" data-field="carrera"><option value="">Todas / sin definir</option>${careers.map(c=>`<option value="${escape(c.nombre)}" ${d.carrera===c.nombre?'selected':''}>${escape(c.nombre)}</option>`).join('')}</select></div></div>${detailsFor(d,t)}<div class="inst-fields-group"><h3>Cuerpo y observaciones</h3>${fArea('contenido','Contenido editable',d.contenido,true,'Texto de prueba; se reemplazará por las tablas/secciones específicas al incorporar el documento terminado.')}${fArea('observaciones','Observaciones',d.observaciones)}</div><span class="tag-status ${statusClass(d.estado)}">${escape(d.estado)} · solo prueba</span><div class="inst-validation" id="institutional-validation">${validationHTML(d,t)}</div></div><div class="preview-card"><div class="inst-preview-toolbar"><span>VISTA PREVIA DE PÁGINAS A4</span><span>${escape(info.label)}</span></div><div class="inst-preview" id="print-preview">${previewHTML(d)}</div></div></div><div class="editor-footer"><small>Portada normalizada · PDF de maqueta; Firebase sigue desconectado.</small>${button('save-doc','Guardar borrador')}${button('review-doc','Simular revisión')}${button('pdf-doc','↓ Exportar PDF de maqueta','','btn btn-primary')}</div>`;
   };
   function render() {
-    $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button type="button" class="nav-button ${state.view===id||(state.view==='editor'&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-text">${escape(title)}</span></button>`).join('');
+    $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button type="button" class="nav-button ${state.view===id||((state.view==='editor'||state.view==='records')&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-text">${escape(title)}</span></button>`).join('');
     $('period-select').innerHTML=DATA.periodos.map(p=>`<option value="${escape(p.id)}" ${p.id===state.periodId?'selected':''}>${escape(p.label)}</option>`).join('');
-    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,editor:renderEditor};
+    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,records:()=>recordsUI.render(),editor:renderEditor};
     $('app-content').innerHTML=(contents[state.view]||renderInicio)();
     window.scrollTo(0,0);
   }
@@ -141,6 +141,7 @@
     const target=event.target.closest('button[data-action], button[data-nav]');if(!target)return;
     if(target.dataset.nav){state.proceso='todos';go(target.dataset.nav);return;}
     const a=target.dataset.action,id=target.dataset.id;
+    if(recordsUI.handleAction(a,id))return;
     if(a==='go-documents'){state.proceso='todos';state.requisito='todos';go('documentos');}
     else if(a==='go-requirements')go('requisitos');
     else if(a==='toggle-proc'){const position=window.scrollY;state.expandedProcess=state.expandedProcess===id?null:id;render();window.scrollTo(0,position);}
@@ -177,14 +178,17 @@
   $('period-select').addEventListener('change', e => {state.periodId=e.target.value;state.draft=null;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');});
   document.addEventListener('click',handleClick);
   $('app-content').addEventListener('change',e=>{
+    recordsUI.input(e);
     if(e.target.id==='filter-process'){state.proceso=e.target.value;render();}
     if(e.target.id==='filter-requirement'){state.requisito=e.target.value;render();}
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
   });
   $('app-content').addEventListener('input',e=>{
+    recordsUI.input(e);
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
   });
-  $('app-content').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='doc-search'){e.preventDefault();state.search=e.target.value.trim();render();}if(e.key==='Enter'&&e.target.id==='career-search'){e.preventDefault();state.carreraSearch=e.target.value.trim();render();}});
+  $('app-content').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='rec-search'){e.preventDefault();recordsUI.handleAction('rec-search');}if(e.key==='Enter'&&e.target.id==='doc-search'){e.preventDefault();state.search=e.target.value.trim();render();}if(e.key==='Enter'&&e.target.id==='career-search'){e.preventDefault();state.carreraSearch=e.target.value.trim();render();}});
   function refreshPreview(){const el=$('print-preview');if(el&&state.draft)el.innerHTML=previewHTML(state.draft);const v=$('institutional-validation');if(v&&state.draft)v.innerHTML=validationHTML(state.draft,typeById(state.draft.tipoId));}
+  const recordsUI=window.UTET_RECORD_UI.create({data:DATA,records:window.UTET_RECORDS,state,period,getType:typeById,go,render,draftDefault,showToast,logAction});
   render();
 })();
