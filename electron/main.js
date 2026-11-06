@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
@@ -82,6 +82,7 @@ async function savePDF(event, input) {
 }
 
 app.whenReady().then(()=>{
+  Menu.setApplicationMenu(null);
   ipcMain.handle('utet:save-pdf',savePDF);
   createWindow();
   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});
