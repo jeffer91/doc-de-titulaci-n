@@ -69,7 +69,6 @@
       if(f.kind==='date'&&!isDate(val)) errors.push(f.label+': usar AAAA-MM-DD.');
       if(f.kind==='time'&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(val)) errors.push(f.label+': usar HH:MM.');
       if(f.kind==='number'&&(!/^\d+([.,]\d+)?$/.test(val)||Number(val.replace(',','.'))>1000000)) errors.push(f.label+': valor numérico inválido.');
-      if(f.kind==='choice:'+'' ){} // La validación de opciones se realiza debajo.
       if(f.kind.startsWith('choice:')&&!f.kind.slice(7).split('|').includes(val)) errors.push(f.label+': opción no permitida.');
       if(val.length>5000) errors.push(f.label+': máximo 5000 caracteres.');
     }
