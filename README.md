@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (maqueta Electron v0.3)
+# Doc de Titulación · UTET (maqueta Electron v0.3.1)
 
 Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
 
@@ -17,6 +17,13 @@ Pruebas automáticas de catálogo, familias y portadas:
 npm run check
 npm test
 ```
+
+## Cambios de la v0.3.1: interfaz más compacta
+
+- Procesos numerados del **01 al 09**, mostrando también sus códigos oficiales (`UTET-PRO-56`, etc.).
+- Menos altura en la barra superior, selector de período, indicadores y filas para mostrar más procesos sin desplazamiento.
+- Los procesos aparecen plegados al abrir Inicio; al expandir uno se muestra su lista real de documentos.
+- Se conserva el selector de período destacado y permanente.
 
 ## Cambios de la v0.3: diseño minimalista
 
