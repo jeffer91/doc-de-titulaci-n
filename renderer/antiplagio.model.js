@@ -306,15 +306,19 @@
   }
   // La primera hoja replica la disposición del memorando institucional en Word.
   // Las tarjetas y gráficos comienzan únicamente en el anexo (segunda hoja).
-  function individualHTML(row,meta,period){
+  function individualHTML(row,meta,period,tipoDocumento='trabajo'){
+    if(!['trabajo','articulo'].includes(tipoDocumento))throw Error('Tipo de memorando inválido.');
+    const esArticulo=tipoDocumento==='articulo';
+    const documento=esArticulo?'artículo académico':'trabajo de titulación';
+    const asunto=esArticulo?'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL ARTÍCULO ACADÉMICO':'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL TRABAJO DE TITULACIÓN';
     const n=number(row.similitud),ok=n!==null&&n<20;
     const norm=normalizeCareer(row.carreraNombre,row.modalidad),sourceFlags=row.fuentes||{};
     const values=SOURCE_TYPES.map(x=>({key:x.key,label:x.label,active:sourceFlags[x.key]==='detected',state:sourceFlags[x.key]||'unknown'}));
     const ratio=n===null?0:n,display=pformat(row.similitud);
     const result=n===null?'SIN RESULTADO':ok?'APROBADO':'NO APROBADO';
     const conclusion=n===null?'No se dispone de un resultado para emitir una conclusión.':
-      ok?'El índice registrado es inferior al 20 %, por lo que el trabajo cumple el criterio de similitud establecido.':
-      'El índice registrado es igual o superior al 20 %, por lo que el trabajo NO APROBADO requiere corregir las coincidencias identificadas y presentar nuevamente el trabajo para un nuevo análisis.';
+      ok?'El índice registrado es inferior al 20 %, por lo que el '+documento+' cumple el criterio de similitud establecido.':
+      'El índice registrado es igual o superior al 20 %, por lo que el '+documento+' NO APROBADO requiere corregir las coincidencias identificadas y presentar nuevamente el '+documento+' para un nuevo análisis.';
     const comparison=n===null?'no determinado':ok?'inferior':'igual o superior';
     const resolution=n===null?'NO DISPONE DE RESULTADO':ok?'CUMPLE CON EL CRITERIO DE SIMILITUD':'NO CUMPLE CON EL CRITERIO DE SIMILITUD';
     const disposition=n===null?'por lo que queda pendiente de revisión':
@@ -331,14 +335,14 @@
       '<div class="ap-word-fields">'+
         field('PARA',E(row.nombres)+'<small>ESTUDIANTE</small>','ap-word-field-para')+
         field('DE','MSc. Jefferson Edgar Villarreal Enríquez<br><strong>COORDINADOR DE TITULACIÓN</strong>','ap-word-field-de')+
-        field('ASUNTO','RESULTADO DEL ANÁLISIS DE SIMILITUD DEL TRABAJO DE TITULACIÓN','ap-word-field-asunto')+
+        field('ASUNTO',E(asunto),'ap-word-field-asunto')+
         field('FECHA',E(day(fecha)),'ap-word-field-fecha')+
       '</div>'+
       '<div class="ap-word-body">'+
         '<p class="ap-word-salutation">De mi consideración:</p>'+
-        '<p>Por medio del presente, se notifica el resultado del análisis de similitud correspondiente a su trabajo de titulación, presentado durante el período académico '+E(period)+'.</p>'+
+        '<p>Por medio del presente, se notifica el resultado del análisis de similitud correspondiente a su '+E(documento)+', presentado durante el período académico '+E(period)+'.</p>'+
         '<p>De acuerdo con el reporte de similitud, el trabajo presenta un índice del <strong>'+E(display)+'</strong>, '+E(comparison)+' al límite institucional establecido del 20 %. En consecuencia, se determina que el trabajo <strong>'+E(resolution)+'</strong>, '+E(disposition)+'.</p>'+
-        '<p>Es importante señalar que el índice de similitud identifica coincidencias textuales con distintas fuentes de información y no constituye, por sí mismo, una determinación de plagio ni implica la aprobación integral del trabajo de titulación.</p>'+
+        '<p>Es importante señalar que el índice de similitud identifica coincidencias textuales con distintas fuentes de información y no constituye, por sí mismo, una determinación de plagio ni implica la aprobación integral del '+E(documento)+'.</p>'+
         '<p>Para efectos de respaldo y seguimiento académico, se adjunta el reporte individual de similitud, que contiene la información académica del estudiante, el resultado obtenido y los datos de identificación del análisis realizado.</p>'+
       '</div>'+
       '<div class="ap-word-signature"><p>Atentamente,</p><div class="ap-word-signature-space" aria-hidden="true"></div>'+
@@ -358,7 +362,7 @@
         '<div class="ap-track ap-long-track"><span class="ap-fill" style="width:'+ratio+'%"></span></div>'+
         '<p class="ap-caption">Criterio aplicado: menor de 20 %. La similitud no determina por sí sola plagio.</p>'+
         '<div class="ap-share"><div class="ap-donut" style="--ap-value:'+ratio+'%"><span>'+E(display)+'</span></div>'+
-        '<p>Distribución general del índice de similitud frente al contenido del trabajo analizado.</p></div></div>'+
+        '<p>Distribución general del índice de similitud frente al contenido del '+E(documento)+' analizado.</p></div></div>'+
       '<div class="ap-personal-card"><h2>3. Fuentes consideradas</h2>'+
         '<div class="ap-personal-sources">'+values.map(v=>'<div><span class="ap-src ap-src-'+v.key+' '+(v.active?'ap-src-on':'ap-src-off')+'">'+glyph(v.key)+'</span><strong>'+E(v.label)+'</strong><span>'+E(v.state==='detected'?'Coincidencia':v.state==='not-detected'?'Sin coincidencia':'Sin información')+'</span></div>').join('')+'</div>'+
         '<p class="ap-caption">Los indicadores de fuentes no representan porcentajes sumables.</p></div>'+
