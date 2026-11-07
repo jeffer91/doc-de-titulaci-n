@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (maqueta Electron v0.4.0)
+# Doc de Titulación · UTET (Electron v0.5.0 · PRO-164 integrado)
 
 Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
 
