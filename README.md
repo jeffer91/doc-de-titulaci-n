@@ -16,6 +16,17 @@ El documento **Porcentaje de Plagio** del proceso **PRO-164** dispone ahora de u
 
 **Protección de datos:** esta nueva pantalla mantiene estudiantes, porcentajes y evidencia **solo en memoria**, sin guardarlos en `localStorage` ni escribirlos en Firebase. Los otros 23 documentos y sus tablas Excel siguen intactos. Cerrar la app o consultar de nuevo pierde el trabajo aún no emitido. La identidad y el acceso de lectura dependen de las reglas **realmente desplegadas** en Firebase, que deben verificarse en el entorno institucional; que la configuración exista en GitHub no concede permisos ni garantiza que el servidor sea accesible. Se recomienda activar autenticación y controles institucionales antes de tratar datos personales en producción. El PDF se genera sin firma y requiere firma legítima.
 
+## Numeración mensual de memorandos UTET
+
+La salida de antiplagio utiliza la nomenclatura **`No. XX MEM-ITSQMET-UTET-AAAA-MM-DD`**, por ejemplo **`No. 01 MEM-ITSQMET-UTET-2026-11-07`**. `XX` es el consecutivo mensual con un mínimo de dos cifras (`01`, `02`, ... `99`, `100`). `UTET` sustituye a `UEAI` y la fecha proviene de la **fecha de emisión del memorando**, no del período académico.
+
+- Al entrar, la app consulta el siguiente número y lo muestra como **provisional y no editable**.
+- Consultar, cambiar de período o cancelar la ventana de guardar **no reserva un número**.
+- Al confirmar la exportación, Electron reserva y persiste el siguiente número en el registro de ese mes, lo inserta en el PDF y conserva el número reservado aunque falle posteriormente la impresión para evitar reuso accidental.
+- La numeración se reinicia a `01` el primer día de cada mes nuevo; meses anteriores mantienen su secuencia.
+- El registro reside en `app.getPath('userData')/utet-memorandos-numeracion.json` (fuera del repositorio); no almacena estudiantes ni resultados. Una base dañada bloquea la emisión en lugar de volver automáticamente a `01`.
+- **Límite actual:** el contador es **local al equipo**, no institucional multiusuario. Si ya se emitieron memorandos en otro sistema o equipo, puede existir una colisión. Antes de declarar el correlativo oficial de toda UTET hace falta conciliar el histórico e implantar un contador central transaccional con autenticación y reglas vigentes en Firebase. No se han modificado las reglas de producción.
+
 ## Arranque local
 
 Necesita Node.js 20 o superior y acceso a Internet al instalar Electron por primera vez.
@@ -82,6 +93,7 @@ La app solo consulta Firebase para PRO-164 bajo demanda; no ejecuta escrituras y
 
 - `electron/main.js`: ventana Electron y exportación aislada de PDF.
 - `electron/firebase-read.js`: lector Firebase de matrículas y estudiantes, solo lectura; sesión opcional en memoria.
+- `electron/memo-numbering.js`: contador local de memorandos UTET, secuencial por mes de emisión y persistente.
 - `renderer/antiplagio.js`, `renderer/antiplagio.model.js`, `renderer/antiplagio.css`: selección, validación y PDF específico PRO-164.
 - `electron/preload.js`: puente IPC restringido.
 - `electron/excel.js`: descarga y lectura de plantillas XLSX con ExcelJS.
