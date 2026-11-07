@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.6.0)
+# Doc de Titulación · UTET (Electron v0.7.0)
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
@@ -6,7 +6,7 @@ Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITS
 
 Cada estudiante seleccionado recibe un memorando distinto; **ya no se emite un consolidado que mezcle estudiantes**.
 
-- Se consulta automáticamente Firebase (proyecto `utet-4387a`) desde las colecciones académicas `matriculas` y `Estudiante` filtrando por período. El buscador funciona por nombre y cédula, con filtro de carrera.
+- **SQLite es la fuente principal de Antiplagio.** Solo en la primera apertura de un período aún no descargado se consulta Firebase (`utet-4387a`: `matriculas` + `Estudiante`). Después, volver a abrir la aplicación, buscar y cambiar a períodos ya cargados utiliza la base local. El buscador funciona por nombre y cédula, con filtro de carrera.
 - Los datos académicos que existan incluyen cédula, nombres, carrera, modalidad de estudios, sede y jornada. «Online» se elimina de la presentación de la carrera y se interpreta como modalidad «En línea» cuando Firebase no proporciona otra modalidad; nunca cambia el dato académico almacenado.
 - El documento individual se dirige al estudiante, desde MSc. Jefferson Edgar Villarreal Enríquez (Coordinador de Titulación), con el asunto «Notificación del resultado de similitud del trabajo de titulación».
 - Cada PDF tiene dos páginas: memorando con tres tarjetas (información académica; resultado; fuentes y referencia), conclusión y espacio de firma; segunda página con gráficos e indicadores de las fuentes.
@@ -16,7 +16,21 @@ Cada estudiante seleccionado recibe un memorando distinto; **ya no se emite un c
 - Los registros nuevos incluyen un ejemplo de maquetación con un porcentaje **simulado** entre 0 y 19,99 % y fuentes ilustrativas. El PDF indica visiblemente que son datos ilustrativos; **no se debe comunicar ni usar como evidencia de un análisis real**. El origen «Dato real» permite incorporar la medición efectiva y su evidencia conforme al procedimiento institucional.
 - No existe casilla «Verificado», vista previa ni cuadro de confirmación final. La interfaz se mantiene compacta.
 - «PDF individuales» guarda archivos por separado dentro de una carpeta elegida. «Descargar ZIP» crea un archivo comprimido con esos mismos documentos. El botón «PDF» junto a un estudiante descarga únicamente ese memorando.
-- Los PDF se generan al descargar, **no se guardan en Firebase**.
+- Los PDF se generan al descargar, **no se guardan en Firebase ni en SQLite**. Reimprimir un memorando sin cambios usa la copia local, no consulta ni escribe en Firebase.
+
+
+## SQLite local-first: política de consultas
+
+- **Primera carga de cada período:** si aún no está descargado, Electron consulta una vez las matrículas, fichas y memorandos; valida el lote completo y lo guarda en SQLite. Incluso un período con 0 alumnos se marca como sincronizado.
+- **Aperturas siguientes:** la pantalla y sus filtros utilizan exclusivamente SQLite, sin lecturas automáticas en Firebase.
+- **Actualizar Firebase:** es el único botón de sincronización **de lectura** del período; actualiza la copia académica local cuando el usuario lo solicita. Muestra la hora de la última sincronización y conserva los datos previos si falla la conexión.
+- **Guardado de documentos:** las ediciones se conservan primero como borradores en SQLite. La emisión inicial o una modificación solicita a Firebase el folio institucional, o reemplaza el ya reservado. Esta **escritura al emitir** es distinta de actualizar la lista académica.
+- **Reimpresión:** documentos con folio y sin modificaciones se reconstruyen íntegramente desde SQLite. Funcionan sin red; los documentos nuevos o con cambios pendientes requieren conexión y permiso para guardar antes de emitir.
+- **Protección frente a fallos:** el reemplazo de listas se hace en una transacción de SQLite y se guarda en disco mediante archivo temporal y renombrado atómico; una falla o respuesta inválida no borra la copia válida. Las modificaciones locales pendientes no se sustituyen al actualizar el período.
+- **Ubicación:** \`app.getPath('userData')/UTET/utet-antiplagio.sqlite\`, fuera del repositorio y de la carpeta D: donde se clonó el proyecto. No se almacena PDF en la base.
+- **Tecnología:** \`sql.js\` utiliza SQLite WASM para evitar recompilar módulos nativos al actualizar Electron. Los accesos se serializan y el archivo se guarda con permisos de usuario; en equipos institucionales se recomienda activar cifrado de disco y control de acceso a la sesión de Windows.
+
+Un nuevo equipo tendrá que sincronizar por primera vez sus períodos. Los datos localmente editados pendientes de sincronización se identifican como tales; no se asignan folios oficiales sin transacción en Firebase.
 
 ## Persistencia y numeración en Firebase
 
@@ -26,7 +40,7 @@ El módulo `electron/antiplagio-store.js` utiliza **colecciones nuevas e indepen
 - `UTET_antiplagio_correlativos`: consecutivo mensual de memorandos.
 - `UTET_antiplagio_referencias`: consecutivo mensual independiente del identificador `UTET-ANT-AAAA-MM-NNNN`.
 
-Los dos consecutivos se asignan en una **transacción de Firestore**, para evitar colisiones entre equipos, con formato `No. XX MEM-ITSQMET-UTET-AAAA-MM-DD`. La edición de un registro ya existente **sobrescribe sus datos actuales** sin cambiar folio, referencia ni fecha. Al volver a ingresar en el mismo período se recuperan registros existentes y es posible descargarlos nuevamente.
+Los dos consecutivos se asignan en una **transacción de Firestore**, para evitar colisiones entre equipos, con formato `No. XX MEM-ITSQMET-UTET-AAAA-MM-DD`. La edición de un registro ya existente **sobrescribe sus datos actuales** sin cambiar folio, referencia ni fecha. Al volver a ingresar en el mismo período se recupera la copia SQLite existente y es posible descargarlos nuevamente sin utilizar Firestore si no tienen cambios.
 
 **Seguridad y despliegue:** la configuración pública del SDK no concede autorización de escritura ni equivale a autenticación. Las operaciones solo funcionarán si las reglas de Firestore ya autorizan el acceso. No se han abierto ni alterado reglas: si Firestore deniega el guardado, la aplicación indica el error y no afirma que se guardó. **No es apropiado abrir escrituras públicas para habilitar la función.** Para producción con datos estudiantiles debe existir una política institucional de acceso protegido, aunque el flujo visible no incluya un formulario de usuario.
 
@@ -50,11 +64,12 @@ GitHub Actions ejecuta además pruebas de impresión real en Chromium/Electron, 
 
 ## Estructura relevante
 
-- `electron/firebase-read.js`: lectura académica Firebase por período; se mantiene separada de las escrituras de memorandos.
+- `electron/antiplagio-local.js`: SQLite por período, caché persistente, transacciones, borradores y reemplazos atómicos.
+- `electron/firebase-read.js`: lectura académica Firebase únicamente durante la primera sincronización o actualización explícita.
 - `electron/antiplagio-store.js`: documentos personales, reemplazos y dos contadores transaccionales.
 - `electron/main.js`: operaciones IPC, impresión aislada en PDF, descarga por carpeta y ZIP.
 - `electron/preload.js`: puente seguro desde la interfaz.
-- `renderer/antiplagio.js`: selección, edición, consulta de memorandos anteriores y descargas.
+- `renderer/antiplagio.js`: lectura local, búsqueda sin red, actualización Firebase manual, selección, borradores y descargas.
 - `renderer/antiplagio.model.js`: validación, fuentes, fechas, formato de memorando individual y gráficos.
 - `renderer/antiplagio.css`: interfaz compacta y documento A4.
 - `electron/memo-numbering.js`: numerador **local anterior**, conservado solo por compatibilidad del exportador histórico; el nuevo flujo individual utiliza el contador de Firebase.
