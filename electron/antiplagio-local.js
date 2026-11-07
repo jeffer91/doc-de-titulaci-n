@@ -207,6 +207,14 @@ async function saveActa(baseDir,record){
   return record;
  });
 }
+async function listActaEvidences(baseDir,periodoId){
+ if(!validPeriod(periodoId))throw Error('Período inválido.');
+ return serialized(async()=>{
+  const {db}=await open(baseDir);
+  return prepared(db,'SELECT cedula,documento FROM actas_articulo_evidencia WHERE periodo_id=?',[periodoId])
+   .map(row=>({...JSON.parse(row.documento),cedula:row.cedula}));
+ });
+}
 async function getActaEvidence(baseDir,periodoId,cedula){
  verifyActaIdentity(periodoId,cedula);
  return serialized(async()=>{
@@ -226,4 +234,4 @@ async function saveActaEvidence(baseDir,periodoId,cedula,evidence){
  });
 }
 module.exports={open,snapshot,replaceFromFirebase,saveDraft,markSynced,validPeriod,checkStudents,tableFor,NAME,
- loadActas,getActa,saveActa,getActaEvidence,saveActaEvidence};
+ loadActas,getActa,saveActa,listActaEvidences,getActaEvidence,saveActaEvidence};
