@@ -70,39 +70,53 @@ assert.ok(pdf.includes('Fuentes identificadas en las evidencias'));
 assert.ok(pdf.includes('Página 1 de'));
 async function testFirebase(){
   const firebase=require('../electron/firebase-read.js');
-  const original=global.fetch;
   const p='2026-04__2026-09';
-  const v=x=>({stringValue:x});
-  const doc=(coll,id,fields)=>({name:'projects/utet-4387a/databases/(default)/documents/'+coll+'/'+id,
-    fields:Object.fromEntries(Object.entries(fields).map(([k,x])=>[k,v(x)]))});
-  let calls=0;
-  global.fetch=async(url,init)=>{
-    calls++;
-    let data=[];
-    if(String(url).includes('runQuery')){
-      const q=JSON.parse(init.body).structuredQuery;
-      assert.equal(q.where.fieldFilter.value.stringValue,p,'filtrar exclusivamente período');
-      data=[
-        {document:doc('matriculas',p+'__0102030405',{cedula:'0102030405',periodoId:p,nombreCarrera:'CONTABILIDAD',codigoCarrera:'C01'})},
-        {document:doc('matriculas',p+'__0102030406',{cedula:'0102030406',periodoId:p,nombreCarrera:'ADMINISTRACIÓN',codigoCarrera:'A01'})}
-      ];
-    }else if(String(url).includes('batchGet')){
-      data=[
-        {found:doc('Estudiante','0102030405',{cedula:'0102030405',nombres:'Ana',apellidos:'Pérez'})},
-        {found:doc('Estudiante','0102030406',{cedula:'0102030406',nombres:'Juan',apellidos:'López'})}
-      ];
-    }else throw Error('Consulta inesperada');
-    return {ok:true,status:200,text:async()=>String(url).includes('batchGet')?data.map(x=>JSON.stringify(x)).join('\n'):JSON.stringify(data)};
+  const trace={queries:[],students:[]};
+  const store={
+    '0102030405':{cedula:'0102030405',nombres:'Ana',apellidos:'Pérez'},
+    '0102030406':{cedula:'0102030406',nombres:'Juan',apellidos:'López'}
   };
-  try{
-    const result=await firebase.loadStudents(p);
-    assert.equal(result.students.length,2);
-    assert.equal(result.students[0].cedula,'0102030406','orden alfabético por apellido');
-    assert.equal(result.students[1].nombres,'Pérez Ana');
-    assert.equal(result.students[1].carreraNombre,'CONTABILIDAD');
-    assert.ok(calls===2);
-    await assert.rejects(()=>firebase.loadStudents('incorrecto'),/período/);
-  }finally{global.fetch=original;}
+  const api={
+    collection(_db,path){return path;},
+    where(field,operation,value){return {field,operation,value};},
+    limit(count){return {count};},
+    query(collection,filter,cap){trace.queries.push({collection,filter,cap});return {collection,filter,cap};},
+    async getDocs(query){
+      assert.equal(query.collection,'matriculas');
+      assert.equal(query.filter.field,'periodoId');
+      assert.equal(query.filter.value,p);
+      return {docs:[
+        {id:p+'__0102030405',data:()=>({cedula:'0102030405',periodoId:p,nombreCarrera:'CONTABILIDAD',codigoCarrera:'C01'})},
+        {id:p+'__0102030406',data:()=>({cedula:'0102030406',periodoId:p,nombreCarrera:'ADMINISTRACIÓN',codigoCarrera:'A01'})},
+        {id:p+'__9999999999',data:()=>({cedula:'9999999999',periodoId:'2026-01__2026-07',nombreCarrera:'OTRA'})},
+        {id:p+'__9999999998',data:()=>({cedula:'9999999998',periodoId:p,eliminado:true})}
+      ]};
+    },
+    doc(_db,collection,id){return {collection,id};},
+    async getDoc(ref){
+      assert.equal(ref.collection,'Estudiante');
+      trace.students.push(ref.id);
+      return {exists:()=>!!store[ref.id],data:()=>store[ref.id]};
+    }
+  };
+  const reader=firebase.createReader({db:{},api});
+  const result=await reader.loadStudents(p);
+  assert.equal(result.students.length,2);
+  assert.equal(result.students[0].cedula,'0102030406');
+  assert.equal(result.students[1].nombres,'Pérez Ana');
+  assert.equal(result.students[1].carreraNombre,'CONTABILIDAD');
+  assert.equal(result.source.includes('Firestore Lite'),true);
+  assert.deepEqual(trace.students.sort(),['0102030405','0102030406']);
+  assert.equal(trace.queries.length,1);
+  await assert.rejects(()=>reader.loadStudents('incorrecto'),/período/);
+  const denied=firebase.explain({code:'permission-denied',message:'Missing or insufficient permissions'},'matriculas');
+  assert.match(denied.message,/reglas/);
+  const bad=firebase.explain({code:'invalid-argument',message:'Unexpected parameter xyz'},'matriculas');
+  assert.match(bad.message,/Unexpected parameter xyz/);
+  // Sin escritura ni API REST construida a mano.
+  const backend=fs.readFileSync(path.join(root,'electron/firebase-read.js'),'utf8');
+  assert.doesNotMatch(backend,/batchGet\?|runQuery\?|signInWithPassword|firebase-admin|setDoc\(/);
+  assert.equal(firebase.validPeriod(p),true);
 }
-testFirebase().then(()=>console.log('OK antiplagio: PDF paginado, datos reales, fuentes, validaciones, Firebase read-only.'))
-  .catch(e=>{console.error(e);process.exitCode=1;});
+testFirebase().then(()=>console.log('OK antiplagio: PDF, consulta por SDK Firestore Lite y mensajes de error.'))
+  .catch(error=>{console.error(error);process.exitCode=1;});
