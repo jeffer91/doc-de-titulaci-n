@@ -21,7 +21,7 @@ function db(){
  return database;
 }
 function identity(periodoId,cedula){
- if(!Local.validPeriod(periodoId)||!/^\\d{10}$/.test(String(cedula||'')))throw Error('Se necesita período y cédula válida para el acta.');
+ if(!Local.validPeriod(periodoId)||!/^\d{10}$/.test(String(cedula||'')))throw Error('Se necesita período y cédula válida para el acta.');
  return periodoId+'__'+cedula;
 }
 function explain(error){
