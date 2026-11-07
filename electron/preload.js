@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('utetDesktop', Object.freeze({
   exportPDF: options => ipcRenderer.invoke('utet:save-pdf', options),
   previewMemoNumber: date => ipcRenderer.invoke('utet:memo-next',date),
+  openAntiplagioPeriod: periodoId => ipcRenderer.invoke('utet:antiplagio-open',periodoId),
+  refreshAntiplagioPeriod: periodoId => ipcRenderer.invoke('utet:antiplagio-refresh',periodoId),
+  saveAntiplagioDraft: record => ipcRenderer.invoke('utet:antiplagio-draft',record),
   loadAntiplagioStudents: periodoId => ipcRenderer.invoke('utet:firebase-students',periodoId),
   antiplagioFirebaseStatus: () => ipcRenderer.invoke('utet:firebase-status'),
   downloadExcelTemplate: spec => ipcRenderer.invoke('utet:excel-template', spec),
