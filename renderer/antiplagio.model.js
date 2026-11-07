@@ -221,7 +221,9 @@
     const compact=rows.length===1 && data.careers.length===1;
     if(compact){
       // Caso de aceptación: 1 estudiante = memorando y reporte en exactamente 2 páginas.
-      pages[1].body += graphBands(data)+graphSources(data);
+      pages[1].body += graphBands(data)+graphSources(data)+
+        '<h2>Fuentes verificadas para el estudiante</h2><div class="ap-source-index">'+
+        '<div><strong>'+E(rows[0].nombres)+'</strong><span>'+spans(rows[0].fuentes)+'</span></div></div>';
     }else{
       pages.push(page(reportPage(graphBands(data)+graphConditions(data)+
         '<p class="ap-caption">La distribución utiliza únicamente porcentajes registrados. Un 0 % real no es un dato ausente.</p>',meta,periodLabel,false),'ap-chart-page'));
