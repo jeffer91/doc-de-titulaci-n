@@ -34,11 +34,16 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   session.draftTimers.set(id,{timer,row,p});
  }
  function flushDraftTimers(){
-  for(const [id,item] of session.draftTimers){clearTimeout(item.timer);saveLocalDraft(item.row,item.p);}
+  const writes=[];
+  for(const [id,item] of session.draftTimers){
+   clearTimeout(item.timer);writes.push(saveLocalDraft(item.row,item.p));
+  }
   session.draftTimers.clear();
+  writes.push(...session.draftWrites.values());
+  return Promise.all(writes);
  }
  function reset(){
-  flushDraftTimers();
+  void flushDraftTimers();
   session.request++;session.students=[];session.selected.clear();session.saved.clear();session.dirty.clear();
   session.loadedPeriod='';session.loading=false;session.query='';session.career='';session.error='';
   session.saveError='';session.status='Sin datos locales';session.problems=[];session.showSources='';
@@ -57,6 +62,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   session.status=force?'Actualizando Firebase...':'Abriendo base local...';
   render();
   try{
+   if(force)await flushDraftTimers();
    const api=force?window.utetDesktop?.refreshAntiplagioPeriod:window.utetDesktop?.openAntiplagioPeriod;
    if(!api)throw Error('Actualiza Electron para utilizar la base SQLite local.');
    const data=await api(target);
