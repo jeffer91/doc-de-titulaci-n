@@ -45,6 +45,7 @@ const packet=(p,students,records=[])=>({periodoId:p,students,records,hasCache:tr
  click('rec-open','plagio-trabajo');
  assert.equal(pending.length,1,'Volver al período cargado NO vuelve a consultar');
  click('ap-refresh');
+ await tick();
  assert.equal(pending.length,2);
  assert.equal(pending[1].method,'firebase','Solo el botón explícito debe pedir actualización remota');
  pending[1].resolve(packet(p,[row(p,'0102030405','Ana Actualizada')],[mem(p)]));
@@ -57,6 +58,7 @@ const packet=(p,students,records=[])=>({periodoId:p,students,records,hasCache:tr
  await tick();await tick();
  assert.match(display(),/Nuevo Período/);
  click('ap-refresh');
+ await tick();
  assert.equal(pending[3].method,'firebase');
  pending[3].reject(new Error('Sin internet'));
  await tick();await tick();
