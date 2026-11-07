@@ -6,8 +6,8 @@
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check electron/main.js && node --check electron/excel.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js && node --check renderer/records.js",
-    "test": "node tests/institutional.test.cjs && node tests/records.test.cjs && node tests/ui.test.cjs"
+    "check": "node --check electron/main.js && node --check electron/excel.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js && node --check renderer/records.js && node --check renderer/antiplagio.model.js && node --check renderer/antiplagio.js && node --check electron/firebase-read.js",
+    "test": "node tests/institutional.test.cjs && node tests/records.test.cjs && node tests/ui.test.cjs && node tests/antiplagio.test.cjs"
   },
   "devDependencies": {
     "electron": "^38.0.0"
