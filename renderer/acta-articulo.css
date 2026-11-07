@@ -1,0 +1,42 @@
+/* Acta de Titulación por Artículo Académico: hoja carta, 3 páginas institucionales. */
+@page{size:letter;margin:0}
+.aa-document{font-family:Arial,Helvetica,sans-serif!important;color:#161b20;font-size:9.8pt;}
+.aa-document .aa-page{box-sizing:border-box;width:216mm;height:279mm;min-height:279mm;max-height:279mm;position:relative;background:#fff;overflow:hidden;padding:4mm 7mm 17mm;break-after:page;page-break-after:always}
+.aa-document .aa-page:last-child{break-after:auto;page-break-after:auto}
+.aa-head{margin:0 0 9mm;border:1px solid #171717;font-size:8.5pt;height:31mm}
+.aa-head-top{height:19mm;display:grid;grid-template-columns:30% 43% 27%;border-bottom:1px solid #222}
+.aa-head-top>div{display:flex;justify-content:center;align-items:center;text-align:center;border-right:1px solid #222;padding:1mm}
+.aa-head-top>div:last-child{border-right:0}
+.aa-head-logo img{max-width:89%;max-height:15mm;object-fit:contain}
+.aa-head-unit{font-size:9.5pt;line-height:1.2}
+.aa-head-doc{display:flex!important;flex-direction:column;justify-content:stretch!important;padding:0!important}
+.aa-head-doc>div{flex:1;display:flex;justify-content:center;align-items:center;line-height:1.15;width:100%;padding:.8mm}
+.aa-head-doc>div+div{border-top:1px solid #222}
+.aa-head-bottom{height:11mm;display:grid;grid-template-columns:30% 43% 27%}
+.aa-head-bottom>div{display:flex;justify-content:center;align-items:center;text-align:center;border-right:1px solid #222;padding:1mm;font-size:8.3pt}
+.aa-head-bottom>div:last-child{border-right:0}
+.aa-footer{position:absolute;bottom:7mm;left:7mm;right:7mm;border-top:1px solid #777;padding-top:1mm;font-size:7.7pt;color:#435366}
+.aa-cover .aa-cover-content{position:absolute;top:89mm;left:12mm;right:12mm;text-align:center}
+.aa-cover h1{font-size:23pt;line-height:1.14;margin:0 0 16mm;color:#000}
+.aa-cover h2{font-size:20.5pt;line-height:1.22;margin:0}
+.aa-signatures{position:absolute;left:10mm;right:10mm;bottom:19mm;width:calc(100% - 20mm);border-collapse:collapse;table-layout:fixed;font-size:8pt}
+.aa-signatures th,.aa-signatures td{border:1px solid #333;text-align:center;padding:1.3mm .7mm;line-height:1.2}
+.aa-signatures th{font-weight:700}
+.aa-signatures .aa-signature-space{height:17mm}
+.aa-signatures tr:last-child td{font-size:7.5pt}
+.aa-constancia{display:flex;flex-direction:column;gap:2mm;background:#eff5fa;border-left:3mm solid #285b85;padding:3mm 4mm;margin:0 0 4mm;font-size:10.2pt;color:#244a69}
+.aa-constancia span{font-size:8pt;color:#546779}
+.aa-identity,.aa-states{width:100%;border-collapse:collapse;table-layout:fixed}
+.aa-identity{margin:0 0 4mm;font-size:8.8pt}
+.aa-identity th,.aa-identity td{border:1px solid #d6dde5;padding:2.3mm 3mm;text-align:left;font-weight:400}
+.aa-identity th{width:29%;font-weight:700;color:#204b6c;background:#edf3f8}
+.aa-section{margin:0 0 4mm}
+.aa-section h2{font-size:10.5pt;background:#eff5fa;color:#214765;border-left:2.5mm solid #285b85;padding:2.1mm 2.8mm;margin:0 0 1.8mm;line-height:1.25}
+.aa-section p{font-size:8.65pt;line-height:1.36;margin:0 0 2mm;text-align:justify}
+.aa-states{font-size:8.3pt}
+.aa-states td{padding:2mm 2.7mm;border-bottom:1px solid #edf0f4}
+.aa-states tr:nth-child(even){background:#f5f9fb}
+.aa-states td:last-child{background:#e5f4ec;color:#236c4a;font-weight:700;width:23%;text-align:left}
+.aa-final{margin-top:8mm;background:#e4f4ec;border-left:3mm solid #218259;padding:3.2mm 3mm;color:#28764e;font-weight:700}
+.aa-end-note{font-size:9pt;line-height:1.4;margin:3mm 2mm}
+.aa-document .aa-content-page .aa-section:last-of-type{margin-bottom:3mm}
