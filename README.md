@@ -1,127 +1,63 @@
-# Doc de Titulación · UTET (Electron v0.5.2 · PRO-164 integrado)
+# Doc de Titulación · UTET (Electron v0.6.0)
 
-Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
+Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
-## PRO-164: Memorando de Porcentaje de Antiplagio
+## PRO-164 · Memorandos individuales de similitud
 
-El documento **Porcentaje de Plagio** del proceso **PRO-164** dispone ahora de un flujo propio (independiente del editor genérico):
-1. Seleccionar uno de los seis períodos en la barra superior.
-2. Abrir **Procesos → PRO-164 → Porcentaje de Plagio → Datos**: la aplicación consulta **automáticamente** estudiantes del período activo en el proyecto Firebase `utet-4387a`, usando `matriculas` y `Estudiante` en modo **solo lectura**, sin pantalla de autenticación.
-3. El buscador filtra por nombre o cédula **mientras se escribe**; el filtro de carrera opera inmediatamente. Seleccionar individualmente o usar **Añadir filtrados**.
-4. Cambiar de período desde la barra superior recarga los estudiantes **sin salir de Antiplagio**. **Actualizar** permite forzar la consulta y requiere confirmar si se van a perder resultados editados.
-5. Registrar porcentaje real (0–100), fecha de reporte, referencia si está disponible, herramienta según la evidencia y confirmar cada valor. Configurar fuentes únicamente cuando su presencia/ausencia esté respaldada; **sin información** no equivale a «no detectada».
-6. Introducir destinatario, cargo y fechas; el número de memorando es **automático**, revisar la vista previa A4 y exportar **un único PDF**.
+Cada estudiante seleccionado recibe un memorando distinto; **ya no se emite un consolidado que mezcle estudiantes**.
 
-**Regla de emisión:** los porcentajes mayores de **19 %** se conservan sin alteración ni ocultamiento, pero bloquean la exportación mientras estén seleccionados. También bloquean la emisión los registros ausentes, sin fecha, sin confirmación o con identificación insuficiente. El 0 % válido no se trata como dato faltante. El memorando ocupa la primera página; las tablas comienzan en la segunda y los gráficos se basan exclusivamente en resultados reales.
+- Se consulta automáticamente Firebase (proyecto `utet-4387a`) desde las colecciones académicas `matriculas` y `Estudiante` filtrando por período. El buscador funciona por nombre y cédula, con filtro de carrera.
+- Los datos académicos que existan incluyen cédula, nombres, carrera, modalidad de estudios, sede y jornada. «Online» se elimina de la presentación de la carrera y se interpreta como modalidad «En línea» cuando Firebase no proporciona otra modalidad; nunca cambia el dato académico almacenado.
+- El documento individual se dirige al estudiante, desde MSc. Jefferson Edgar Villarreal Enríquez (Coordinador de Titulación), con el asunto «Notificación del resultado de similitud del trabajo de titulación».
+- Cada PDF tiene dos páginas: memorando con tres tarjetas (información académica; resultado; fuentes y referencia), conclusión y espacio de firma; segunda página con gráficos e indicadores de las fuentes.
+- Siete tipos de fuente: Google, sitios web, repositorios académicos, publicaciones, documentos, trabajos académicos y repositorio institucional ITSQMET.
+- El resultado se clasifica conforme al criterio configurado para este proceso: **menor de 20 %** en rango; **20 % o superior** requiere corrección y una nueva presentación, sin plazo automático. Un índice de similitud no constituye por sí solo evidencia de plagio.
+- La fecha determinista de presentación es el **día 15 del mes siguiente al cierre del período**, trasladada al lunes siguiente si coincide con sábado o domingo. No contempla otros feriados nacionales. La fecha de memorando y del reporte es la misma y permanece constante al corregir.
+- Los registros nuevos incluyen un ejemplo de maquetación con un porcentaje **simulado** entre 0 y 19,99 % y fuentes ilustrativas. El PDF indica visiblemente que son datos ilustrativos; **no se debe comunicar ni usar como evidencia de un análisis real**. El origen «Dato real» permite incorporar la medición efectiva y su evidencia conforme al procedimiento institucional.
+- No existe casilla «Verificado», vista previa ni cuadro de confirmación final. La interfaz se mantiene compacta.
+- «PDF individuales» guarda archivos por separado dentro de una carpeta elegida. «Descargar ZIP» crea un archivo comprimido con esos mismos documentos. El botón «PDF» junto a un estudiante descarga únicamente ese memorando.
+- Los PDF se generan al descargar, **no se guardan en Firebase**.
 
-**Protección de datos:** esta pantalla mantiene estudiantes, porcentajes y evidencia **solo en memoria**, sin guardarlos en `localStorage` ni escribirlos en Firebase. Los otros 23 documentos y sus tablas Excel siguen intactos. Cerrar la app o consultar de nuevo pierde el trabajo aún no emitido. La configuración web de Firebase es pública y **no autentica** a la persona que usa el programa. La consulta directa funciona **solo si las reglas realmente desplegadas permiten lectura sin sesión**; un rechazo 401/403 se muestra como error y jamás se omite. Las reglas de lectura pública de cédulas y nombres representan un riesgo de privacidad. Para producción institucional debe revisarse la política de acceso y desplegarse seguridad adecuada sin exigir necesariamente un formulario visible. El PDF se genera sin firma y requiere firma legítima.
+## Persistencia y numeración en Firebase
 
-## Numeración mensual de memorandos UTET
+El módulo `electron/antiplagio-store.js` utiliza **colecciones nuevas e independientes**; no escribe en `matriculas` ni en `Estudiante`:
 
-La salida de antiplagio utiliza la nomenclatura **`No. XX MEM-ITSQMET-UTET-AAAA-MM-DD`**, por ejemplo **`No. 01 MEM-ITSQMET-UTET-2026-11-07`**. `XX` es el consecutivo mensual con un mínimo de dos cifras (`01`, `02`, ... `99`, `100`). `UTET` sustituye a `UEAI` y la fecha proviene de la **fecha de emisión del memorando**, no del período académico.
+- `UTET_antiplagio_memorandos`: un registro vigente por combinación período + cédula. Guarda datos del estudiante, porcentaje, fuente, origen, fecha, folio y versión de plantilla.
+- `UTET_antiplagio_correlativos`: consecutivo mensual de memorandos.
+- `UTET_antiplagio_referencias`: consecutivo mensual independiente del identificador `UTET-ANT-AAAA-MM-NNNN`.
 
-- Al entrar, la app consulta el siguiente número y lo muestra como **provisional y no editable**.
-- Consultar, cambiar de período o cancelar la ventana de guardar **no reserva un número**.
-- Al confirmar la exportación, Electron reserva y persiste el siguiente número en el registro de ese mes, lo inserta en el PDF y conserva el número reservado aunque falle posteriormente la impresión para evitar reuso accidental.
-- La numeración se reinicia a `01` el primer día de cada mes nuevo; meses anteriores mantienen su secuencia.
-- El registro reside en `app.getPath('userData')/utet-memorandos-numeracion.json` (fuera del repositorio); no almacena estudiantes ni resultados. Una base dañada bloquea la emisión en lugar de volver automáticamente a `01`.
-- **Límite actual:** el contador es **local al equipo**, no institucional multiusuario. Si ya se emitieron memorandos en otro sistema o equipo, puede existir una colisión. Antes de declarar el correlativo oficial de toda UTET hace falta conciliar el histórico e implantar un contador central transaccional con autenticación y reglas vigentes en Firebase. No se han modificado las reglas de producción.
+Los dos consecutivos se asignan en una **transacción de Firestore**, para evitar colisiones entre equipos, con formato `No. XX MEM-ITSQMET-UTET-AAAA-MM-DD`. La edición de un registro ya existente **sobrescribe sus datos actuales** sin cambiar folio, referencia ni fecha. Al volver a ingresar en el mismo período se recuperan registros existentes y es posible descargarlos nuevamente.
 
-## Corrección de lectura de Firebase (v0.5.2)
+**Seguridad y despliegue:** la configuración pública del SDK no concede autorización de escritura ni equivale a autenticación. Las operaciones solo funcionarán si las reglas de Firestore ya autorizan el acceso. No se han abierto ni alterado reglas: si Firestore deniega el guardado, la aplicación indica el error y no afirma que se guardó. **No es apropiado abrir escrituras públicas para habilitar la función.** Para producción con datos estudiantiles debe existir una política institucional de acceso protegido, aunque el flujo visible no incluya un formulario de usuario.
 
-- Se reemplazaron las solicitudes REST manuales `:runQuery` y `:batchGet` por el **SDK oficial Firebase Firestore Lite** (`firebase/firestore/lite`), apto para consultas online de solo lectura desde Node/Electron. El servicio se inicializa una sola vez en el proceso principal usando la configuración web de UTET.
-- Se conserva el esquema de Requisitos V2: `matriculas` filtradas por `periodoId` y documentos `Estudiante/{cedula}`. No se consultan períodos ajenos, y se omiten matrículas eliminadas. Consulta limitada a 5000 matrículas por período y fichas leídas en grupos de 12.
-- No se solicita cuenta, contraseña ni credenciales privadas; **las reglas actuales de Firestore determinan si puede realizarse la lectura**. Esta corrección no altera permisos ni hace pública ninguna colección.
-- Los errores del SDK se informan con su código y operación (por ejemplo `permission-denied · matriculas` o `invalid-argument · Estudiante`) en lugar de ocultarlos tras `Bad Request`.
-- Las pruebas usan un doble del SDK y comprueban datos y errores. La comprobación con la **base real** requiere ejecutar la aplicación en el equipo autorizado.
+No se ha verificado desde el código que las reglas de Firebase institucional permitan escribir estas tres colecciones; hay que validar la operación real en un entorno autorizado antes de usarla con estudiantes.
 
-## Interfaz compacta y conexión automática (v0.5.1)
+## Inicio y comprobaciones
 
-- Dos paneles: **Estudiantes y resultados**; **Memorando y PDF**. Se redujo el texto de ayuda visible.
-- Entrada directa al PRO-164 → consulta automática; no existe panel de correo/contraseña, y **Actualizar** reemplaza la consulta manual.
-- Búsqueda instantánea sin perder foco, filtro de carrera y selección múltiple.
-- Cambiar el período activo dentro del PRO-164 conserva la pantalla, descarta el conjunto anterior y consulta la nueva matrícula. Respuestas tardías de otro período se ignoran.
-- Si Firestore rechaza la consulta, se muestra el fallo y no se sustituyen estudiantes reales por datos ficticios.
-- Las pruebas específicas verifican ese flujo. La conexión **real** al entorno institucional depende de la red y las reglas desplegadas, no puede certificarse con pruebas simuladas.
-
-## Arranque local
-
-Necesita Node.js 20 o superior y acceso a Internet al instalar Electron por primera vez.
+Requiere Node.js 20 o posterior.
 
 ```bash
 npm install
 npm start
 ```
 
-Pruebas automáticas de catálogo, familias y portadas:
-
 ```bash
 npm run check
 npm test
 ```
 
-## Cambios de la v0.4: formularios, Excel y tablas para los 24 documentos
+GitHub Actions ejecuta además pruebas de impresión real en Chromium/Electron, mediante Xvfb.
 
-- Cada documento abre su propia **tabla por período académico** desde Inicio o el catálogo.
-- **Formulario** para agregar o editar filas individuales; la tabla permanece visible y admite búsqueda y eliminación.
-- **Descargar plantilla Excel (.xlsx)**: columnas propias del documento, hojas de datos e instrucciones, formatos de texto y listas de opciones cuando corresponda.
-- **Cargar Excel (.xlsx)**: comprobación de encabezados y tipos, vista previa de filas nuevas, duplicadas o erróneas; confirmar con opción de omitir o actualizar duplicados.
-- El formulario y Excel comparten **el mismo almacenamiento local**, no generan bases separadas.
-- Desde una fila se puede **preparar un documento de maqueta** en el editor existente, o preparar un consolidado con los registros de la tabla.
-- Se mantiene el carácter provisional del contenido documental: no se asignan folios ni firmas ni actas oficiales; Firebase desconectado para los otros documentos; lectura bajo demanda únicamente en PRO-164.
-- Los datos cargados localmente, especialmente nombres y cédulas, **no deben utilizarse en equipos compartidos** hasta contar con almacenamiento y permisos institucionales apropiados.
+## Estructura relevante
 
-## Cambios de la v0.3.1: interfaz más compacta
+- `electron/firebase-read.js`: lectura académica Firebase por período; se mantiene separada de las escrituras de memorandos.
+- `electron/antiplagio-store.js`: documentos personales, reemplazos y dos contadores transaccionales.
+- `electron/main.js`: operaciones IPC, impresión aislada en PDF, descarga por carpeta y ZIP.
+- `electron/preload.js`: puente seguro desde la interfaz.
+- `renderer/antiplagio.js`: selección, edición, consulta de memorandos anteriores y descargas.
+- `renderer/antiplagio.model.js`: validación, fuentes, fechas, formato de memorando individual y gráficos.
+- `renderer/antiplagio.css`: interfaz compacta y documento A4.
+- `electron/memo-numbering.js`: numerador **local anterior**, conservado solo por compatibilidad del exportador histórico; el nuevo flujo individual utiliza el contador de Firebase.
+- `renderer/records.js`, `renderer/records-ui.js`, `electron/excel.js`: formularios y Excel de los otros tipos documentales.
 
-- Procesos numerados del **01 al 09**, mostrando también sus códigos oficiales (`UTET-PRO-56`, etc.).
-- Menos altura en la barra superior, selector de período, indicadores y filas para mostrar más procesos sin desplazamiento.
-- Los procesos aparecen plegados al abrir Inicio; al expandir uno se muestra su lista real de documentos.
-- Se conserva el selector de período destacado y permanente.
-
-## Cambios de la v0.3: diseño minimalista
-
-- Menú horizontal permanente con Inicio, Procesos, Documentos, Requisitos y Configuración; se eliminó el menú lateral.
-- Selector de período académico resaltado y fijo en la parte superior en todas las pantallas.
-- Inicio con únicamente los indicadores **9 procesos** y **24 documentos**, más un listado desplegable de procesos y sus documentos reales.
-- Cada documento ahora abre su tabla editable mediante **Datos / Abrir tabla**.
-- Se mantienen los borradores locales, filtros por requisito, vista previa y exportación de PDF de maqueta.
-- Solo PRO-164 puede consultar estudiantes desde Firebase. Ningún módulo escribe datos académicos en Firebase.
-
-## Formatos institucionales incorporados en v0.2
-
-- Portadas **RGI / INF / ACT** conforme a la *Guía de estandarización de portadas institucionales ITSQMET v1.1* (octubre de 2026): **A4**, márgenes de **1,5 cm**, tablas de **18 cm** y anchos específicos para cada familia; tipografía Arial, encabezados con celdas combinadas, bloque de firmas de tres columnas **solo en la primera hoja**.
-- Encabezados **RGI**: tres columnas (4,5 / 9 / 4,5 cm), dos filas. **INF**: 4,8 / 9,5 / 3,7 cm, tres filas. **ACT**: 5,2 / 7,6 / 5,2 cm, tres filas.
-- Firmantes por defecto **solo para RGI e INF**: Mgs. Jefferson Villarreal (UTET), Ing. Martha Tomalá y Dr. Alex León; datos configurables por documento. ACT deja firmantes variables.
-- Correspondencia **OFI / MEM / COM** con campos editables tomados de las muestras institucionales. El certificado CERT aportado como referencia **no se añade al catálogo** de 24 registros.
-- Registro de **asistencia a inducción** con tema, fecha, capacitador, jefe inmediato y tabla de asistentes verificados en páginas con numeración continua.
-- Distinción explícita entre la **portada ACT de reunión** y el cuerpo, todavía pendiente, del acta de seguimiento UTET-PRO-58. Las **actas de titulación AT** y el **Plan de Estudios del Núcleo Complexivo** siguen con aviso de formato específico pendiente.
-- Validación visible de campos y de códigos que contengan marcadores `0X`, `20XX`, `AÑO`, `MES`, etc. Los códigos de referencia del manual no se convierten automáticamente en folios definitivos.
-- Exportación de **PDF de maqueta** desde una ventana aislada de Electron que imprime únicamente el documento (no la navegación), con sello visible **«MAQUETA · DOCUMENTO NO APROBADO»**.
-
-## Limitaciones intencionales
-
-**Esta versión es una maqueta.** Los campos de cada documento real se completarán conforme a las plantillas que suministre la unidad. La paginación de contenido se efectúa por bloques para la vista previa; todavía falta validación visual de los formatos definitivos, especialmente con tablas extensas. Los PDF tienen valor de muestra, **no son actas ni aprobaciones oficiales**. Las firmas son espacios sin imágenes ni certificados electrónicos.
-
-La app solo consulta Firebase para PRO-164 bajo demanda; no ejecuta escrituras y no incorpora registros personales del respaldo de demostración. Sus métricas son **resúmenes agregados** suministrados previamente, no lecturas en tiempo real. Borradores y revisiones simuladas permanecen en `localStorage` del equipo.
-
-**Plantillas XLSX**: ya se pueden descargar y cargar. La exportación de documentos terminados en DOCX, la exportación de registros a Excel y el contenido oficial de cada documento siguen pendientes de implementar. El `npm install` no pudo concluir en el entorno de pruebas de esta sesión; sí se verificó la sintaxis de los archivos y el motor mediante pruebas de Node.js.
-
-## Estructura
-
-- `electron/main.js`: ventana Electron y exportación aislada de PDF.
-- `electron/firebase-read.js`: lector Firebase mediante SDK Firestore Lite; solo lectura directa y sin formulario de sesión.
-- `electron/memo-numbering.js`: contador local de memorandos UTET, secuencial por mes de emisión y persistente.
-- `renderer/antiplagio.js`, `renderer/antiplagio.model.js`, `renderer/antiplagio.css`: selección, validación y PDF específico PRO-164.
-- `electron/preload.js`: puente IPC restringido.
-- `electron/excel.js`: descarga y lectura de plantillas XLSX con ExcelJS.
-- `renderer/records.js`: campos específicos, validación y preparación de borradores para los 24 tipos.
-- `renderer/records-ui.js`, `renderer/records.css`: formularios, tabla editable e importación confirmada.
-- `renderer/index.html`, `renderer/styles.css`, `renderer/app.js`: navegación y formularios de la maqueta.
-- `renderer/institutional.js`, `renderer/institutional.css`: motor de formatos, reglas de portada, vista previa y validaciones.
-- `renderer/assets/logo-itsqmet.png`: imagen institucional tomada de las plantillas proporcionadas.
-- `renderer/data.js`: catálogo y estadísticas agregadas anonimizadas.
-- `tests/institutional.test.cjs`, `tests/records.test.cjs` y `tests/ui.test.cjs`: pruebas del catálogo, tipologías, formularios y navegación.
-
-## Próxima etapa
-
-Incorporar, uno por uno, los documentos reales previamente aprobados para completar su cuerpo, tablas, distribución, numeración y automatización desde Firebase, respetando las reglas de seguridad y el control documental de ITSQMET.
+Los otros 23 tipos continúan en la fase de maquetación. Esta ampliación no convierte en documentos aprobados las plantillas institucionales que todavía no se han formalizado. Las firmas electrónicas no se generan automáticamente; la firma queda en blanco hasta su aplicación legítima.
