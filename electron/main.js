@@ -8,6 +8,8 @@ const Firebase = require('./firebase-read.js');
 const Memo = require('./memo-numbering.js');
 const AntiplagioStore = require('./antiplagio-store.js');
 const AntiplagioLocal = require('./antiplagio-local.js');
+const ActaArticulo = require('./acta-articulo.js');
+const ActaArticuloModel = require('../renderer/acta-articulo.model.js');
 const JSZip = require('jszip');
 const Downloads = require('./downloads.js');
 
@@ -45,10 +47,10 @@ function verifySender(event) {
   }
 }
 
-async function createPrintHTML(documentMarkup) {
+async function createPrintHTML(documentMarkup,kind='a4') {
   const [css, extraCss, asset, memoFooterSVG] = await Promise.all([
     fs.readFile(path.join(RENDERER,'institutional.css'),'utf8'),
-    fs.readFile(path.join(RENDERER,'antiplagio.css'),'utf8'),
+    fs.readFile(path.join(RENDERER,kind==='acta'?'acta-articulo.css':'antiplagio.css'),'utf8'),
     fs.readFile(path.join(RENDERER,'assets','logo-itsqmet.png')),
     fs.readFile(path.join(RENDERER,'assets','memorando-pie-itsqmet.svg'),'utf8')
   ]);
@@ -57,7 +59,7 @@ async function createPrintHTML(documentMarkup) {
   const memoFooterURL = `data:image/svg+xml;base64,${Buffer.from(memoFooterSVG,'utf8').toString('base64')}`;
   const markup = documentMarkup.replaceAll('src="assets/logo-itsqmet.png"',`src="${logoURL}"`)
     .replaceAll('src="assets/memorando-pie-itsqmet.svg"',`src="${memoFooterURL}"`);
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:white}*{box-sizing:border-box}</style><style>${css}</style><style>${extraCss}</style></head><body>${markup}</body></html>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:${kind==='acta'?'letter':'A4'};margin:0}html,body{margin:0;padding:0;background:white}*{box-sizing:border-box}</style><style>${css}</style><style>${extraCss}</style></head><body>${markup}</body></html>`;
 }
 
 async function savePDF(event, input) {
@@ -163,6 +165,48 @@ async function exportAntiplagio(event,spec){
  }
 }
 
+
+async function exportArticleActs(event,spec){
+ verifySender(event);
+ if(!spec||!['pdfs','zip'].includes(spec.mode)||!Array.isArray(spec.cedulas)||
+    spec.cedulas.length<1||spec.cedulas.length>300||new Set(spec.cedulas).size!==spec.cedulas.length||
+    !AntiplagioLocal.validPeriod(spec.periodoId)||typeof spec.periodLabel!=='string'||spec.periodLabel.length>120)
+  throw Error('Selección de actas AA inválida.');
+ const records=[];
+ for(const cedula of spec.cedulas){
+  const r=await ActaArticulo.get(localDir(),spec.periodoId,cedula);
+  if(!ActaArticuloModel.valid(r))throw Error('No existe un acta AA emitida y verificada para '+cedula+'.');
+  records.push(r);
+ }
+ const printer=new BrowserWindow({show:false,webPreferences:{
+  sandbox:true,nodeIntegration:false,contextIsolation:true,javascript:false,webSecurity:true,images:true
+ }});
+ let tempDir=null;
+ try{
+  tempDir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-aa-'));
+  const zip=spec.mode==='zip'?new JSZip():null,output=[],dest=app.getPath('downloads');
+  for(let i=0;i<records.length;i++){
+   const record=records[i],filename=ActaArticuloModel.filename(record);
+   const html=ActaArticuloModel.render(record,spec.periodLabel);
+   const file=path.join(tempDir,'acta_'+i+'.html');
+   await fs.writeFile(file,await createPrintHTML(html,'acta'),{mode:0o600});
+   await printer.loadFile(file);
+   const pdf=await printer.webContents.printToPDF({
+    printBackground:true,preferCSSPageSize:true,pageSize:'Letter',
+    margins:{marginType:'none'},displayHeaderFooter:false
+   });
+   if(zip)zip.file(filename,pdf);
+   else output.push(await Downloads.saveUnique(dest,filename,pdf));
+  }
+  if(zip)output.push(await Downloads.saveUnique(dest,'Actas_Articulo_Academico_UTET.zip',
+    await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'})));
+  return {count:records.length,location:dest,files:output.map(x=>x.filePath)};
+ }finally{
+  if(!printer.isDestroyed())printer.destroy();
+  if(tempDir)await fs.rm(tempDir,{recursive:true,force:true});
+ }
+}
+
 const periodSyncs=new Map();
 const localDir=()=>app.getPath('userData');
 async function refreshAntiplagioPeriod(periodoId,modo='trabajo'){
@@ -221,6 +265,11 @@ else {
     verifySender(event);
     return Memo.next(app.getPath('userData'),date);
   });
+  ipcMain.handle('utet:acta-articulo-open',(event,p)=>{verifySender(event);return ActaArticulo.openPeriod(p,localDir(),Firebase.loadStudents);});
+  ipcMain.handle('utet:acta-articulo-refresh',(event,p)=>{verifySender(event);return ActaArticulo.refreshStudents(p,localDir(),Firebase.loadStudents);});
+  ipcMain.handle('utet:acta-articulo-verify',(event,p,c)=>{verifySender(event);return ActaArticulo.readEvidence(p,c,localDir());});
+  ipcMain.handle('utet:acta-articulo-issue',(event,p,c)=>{verifySender(event);return ActaArticulo.issue(p,c,localDir());});
+  ipcMain.handle('utet:acta-articulo-export',exportArticleActs);
   ipcMain.handle('utet:antiplagio-open',(event,periodoId,modo)=>{verifySender(event);return openAntiplagioPeriod(periodoId,modo);});
   ipcMain.handle('utet:antiplagio-refresh',(event,periodoId,modo)=>{verifySender(event);return refreshAntiplagioPeriod(periodoId,modo);});
   ipcMain.handle('utet:antiplagio-draft',(event,record)=>{verifySender(event);return AntiplagioLocal.saveDraft(localDir(),record);});
