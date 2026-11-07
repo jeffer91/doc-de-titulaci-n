@@ -321,12 +321,12 @@
     const dataRow=(k,v)=>'<div class="ap-detail"><span>'+E(k)+'</span><strong>'+E(v||'No registrado')+'</strong></div>';
     const logo=()=>'<div class="ap-word-logo"><img src="assets/logo-itsqmet.png" alt="Logotipo institucional ITSQMET"></div>';
     const footer=()=>'<div class="ap-word-footer"><img src="assets/memorando-pie-itsqmet.svg" alt="Pie institucional ITSQMET"></div>';
-    const disclosure=demo?'<p class="ap-word-demonstration">DATOS ILUSTRATIVOS · NO CONSTITUYEN UN ANÁLISIS REAL</p>':'';
+    const simulationClass=demo?' ap-simulation':'';
     const field=(label,value,cls='')=>'<div class="ap-word-field '+cls+'"><strong>'+E(label)+'</strong><b>:</b><span>'+value+'</span></div>';
     const bodyNote=ok?
       'En virtud de que el porcentaje registrado es inferior al 20 %, se comunica que el resultado es <strong>APROBADO</strong> y que su trabajo cumple el criterio de similitud aplicable al proceso de titulación.':
       'Dado que el porcentaje registrado alcanza o supera el 20 %, se comunica que su trabajo <strong>NO APROBADO</strong> debe ser corregido y presentado nuevamente para un nuevo análisis, sin establecer un plazo en este memorando.';
-    const first='<section class="inst-page ap-page ap-word-memorandum">'+logo()+
+    const first='<section class="inst-page ap-page ap-word-memorandum'+simulationClass+'">'+logo()+
       '<h1 class="ap-word-title">Memorando No. <span class="ap-word-code">'+E(folio)+'</span></h1>'+
       '<div class="ap-word-fields">'+
         field('PARA',E(row.nombres)+'<small>ESTUDIANTE</small>','ap-word-field-para')+
@@ -339,13 +339,14 @@
         '<p>Por medio del presente, me dirijo a usted para comunicar el resultado del análisis de similitud de su trabajo de titulación, correspondiente al período académico <strong>'+E(period)+'</strong>.</p>'+
         '<p>El porcentaje de similitud registrado es de <strong>'+E(display)+'</strong>. '+bodyNote+'</p>'+
         '<p>El índice de similitud refleja coincidencias de contenido y no constituye, por sí solo, una determinación de plagio. El detalle académico, las fuentes consideradas y la referencia del reporte constan en el anexo que inicia en la segunda página.</p>'+
-        disclosure+
+
       '</div>'+
       '<div class="ap-word-signature"><p>Atentamente,</p><div class="ap-word-signature-space" aria-hidden="true"></div>'+
         '<strong>MSc. Jefferson Edgar Villarreal Enríquez</strong><strong>COORDINADOR DE TITULACIÓN</strong></div>'+
       footer()+'</section>';
-    const second='<section class="inst-page ap-page ap-personal-report ap-word-report">'+logo()+
-      '<h1>ANEXO · REPORTE INDIVIDUAL DE SIMILITUD</h1><p class="ap-subtitle">'+E(row.nombres)+' · '+E(reference)+'</p>'+disclosure+
+    const second='<section class="inst-page ap-page ap-personal-report ap-word-report'+simulationClass+'">'+logo()+
+      '<h1>ANEXO · REPORTE INDIVIDUAL DE SIMILITUD</h1><p class="ap-subtitle">'+E(row.nombres)+' · '+E(reference)+'</p>'+
+      '<div class="ap-word-context"><strong>Contexto del análisis.</strong> El presente anexo amplía el resultado comunicado en el memorando, mediante la identificación académica del estudiante, el índice de similitud registrado y las categorías de fuentes consideradas. Estos indicadores permiten contextualizar las coincidencias y facilitar el seguimiento del trabajo de titulación, sin constituir por sí solos una determinación de plagio.</div>'+
       '<div class="ap-personal-card"><h2>1. Información académica</h2><div class="ap-personal-grid">'+
         dataRow('Nombres y apellidos',row.nombres)+dataRow('Cédula',row.cedula)+
         dataRow('Carrera',norm.carrera)+dataRow('Modalidad de estudios',norm.modalidad)+
