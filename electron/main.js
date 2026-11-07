@@ -9,6 +9,7 @@ const Memo = require('./memo-numbering.js');
 const AntiplagioStore = require('./antiplagio-store.js');
 const AntiplagioLocal = require('./antiplagio-local.js');
 const JSZip = require('jszip');
+const Downloads = require('./downloads.js');
 
 
 const ROOT = path.join(__dirname, '..');
@@ -108,52 +109,56 @@ async function savePDF(event, input) {
 
 
 function validateAntiplagioExport(spec){
- if(!spec||!Array.isArray(spec.files)||!['folder','zip'].includes(spec.mode)||!spec.files.length||spec.files.length>500)throw Error('Selección de memorandos inválida (1 a 500).');
+ if(!spec||!Array.isArray(spec.files)||!['pdfs','zip'].includes(spec.mode)||!spec.files.length||spec.files.length>500)
+  throw Error('Selección de memorandos inválida (1 a 500).');
  for(const file of spec.files){
-   if(typeof file.html!=='string'||file.html.length>MAX_HTML||!file.html.includes('class="institutional-document'))throw Error('Contenido PDF inválido.');
-   if(typeof file.name!=='string'||file.name.length>120||!/^[-_\p{L}\p{N} .]+\.pdf$/u.test(file.name))throw Error('Nombre de PDF inválido.');
+  if(typeof file.html!=='string'||file.html.length>MAX_HTML||!file.html.includes('class="institutional-document'))
+   throw Error('Contenido PDF inválido.');
+  Downloads.validateName(file.name,'pdf');
  }
 }
 async function exportAntiplagio(event,spec){
- verifySender(event);validateAntiplagioExport(spec);
- const owner=BrowserWindow.fromWebContents(event.sender);
+ verifySender(event);
+ validateAntiplagioExport(spec);
+ // Nunca pedir carpeta ni diálogo de Guardar como: usar Descargas del usuario.
+ const destination=app.getPath('downloads');
  const isZip=spec.mode==='zip';
- let dir=null,target=null;
- if(isZip){
-   const result=await dialog.showSaveDialog(owner,{title:'Guardar memorandos ZIP',defaultPath:'Memorandos_UTET.zip',filters:[{name:'ZIP',extensions:['zip']}]});
-   if(result.canceled||!result.filePath)return {canceled:true};
-   target=result.filePath;
- }else{
-   const result=await dialog.showOpenDialog(owner,{title:'Seleccionar carpeta para memorandos',properties:['openDirectory','createDirectory']});
-   if(result.canceled||!result.filePaths?.[0])return {canceled:true};
-   dir=result.filePaths[0];
- }
- const printer=new BrowserWindow({show:false,webPreferences:{sandbox:true,nodeIntegration:false,contextIsolation:true,javascript:false,webSecurity:true,images:true}});
+ const printer=new BrowserWindow({show:false,webPreferences:{
+  sandbox:true,nodeIntegration:false,contextIsolation:true,javascript:false,
+  webSecurity:true,images:true
+ }});
  let tempDir=null;
+ const saved=[];
  try{
-   tempDir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-ant-'));
-   const zip=isZip?new JSZip():null;
-   const names=new Set();
-   let index=0;
-   for(const file of spec.files){
-     const name=file.name.replace(/[\/]/g,'_');
-     if(names.has(name))throw Error('Nombre de PDF duplicado: '+name);
-     names.add(name);
-     const inputFile=path.join(tempDir,'p'+index+'.html');index++;
-     await fs.writeFile(inputFile,await createPrintHTML(file.html),{mode:0o600});
-     await printer.loadFile(inputFile);
-     const pdf=await printer.webContents.printToPDF({printBackground:true,preferCSSPageSize:true,pageSize:'A4',margins:{marginType:'none'},displayHeaderFooter:false});
-     if(zip)zip.file(name,pdf);
-     else await fs.writeFile(path.join(dir,name),pdf);
-   }
-   if(zip)await fs.writeFile(target,await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}));
-   return {canceled:false,count:spec.files.length,location:target||dir};
+  tempDir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-ant-'));
+  const zip=isZip?new JSZip():null;
+  const names=new Set();
+  let index=0;
+  for(const file of spec.files){
+   const name=Downloads.validateName(file.name,'pdf');
+   if(names.has(name))throw Error('Nombre de PDF duplicado: '+name);
+   names.add(name);
+   const inputFile=path.join(tempDir,'p'+index+'.html');index++;
+   await fs.writeFile(inputFile,await createPrintHTML(file.html),{mode:0o600});
+   await printer.loadFile(inputFile);
+   const pdf=await printer.webContents.printToPDF({
+    printBackground:true,preferCSSPageSize:true,pageSize:'A4',
+    margins:{marginType:'none'},displayHeaderFooter:false
+   });
+   if(zip)zip.file(name,pdf);
+   else saved.push(await Downloads.saveUnique(destination,name,pdf));
+  }
+  if(zip){
+   const compressed=await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'});
+   saved.push(await Downloads.saveUnique(destination,'Memorandos_UTET.zip',compressed));
+  }
+  return {canceled:false,count:spec.files.length,location:destination,
+   files:saved.map(x=>x.filePath)};
  }finally{
-   if(!printer.isDestroyed())printer.destroy();
-   if(tempDir)await fs.rm(tempDir,{recursive:true,force:true});
+  if(!printer.isDestroyed())printer.destroy();
+  if(tempDir)await fs.rm(tempDir,{recursive:true,force:true});
  }
 }
-
 
 const periodSyncs=new Map();
 const localDir=()=>app.getPath('userData');

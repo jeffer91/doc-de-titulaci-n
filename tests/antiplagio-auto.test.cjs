@@ -4,13 +4,13 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'../renderer'),elements=new Map(),listeners=new Map(),pending=[];
 const node=id=>({id,value:'',innerHTML:'',textContent:'',classList:{add(){},remove(){}},addEventListener(a,fn){listeners.set(id+':'+a,fn);}});
 const document={getElementById(id){if(!elements.has(id))elements.set(id,node(id));return elements.get(id);},addEventListener(a,fn){listeners.set('document:'+a,fn);}};
-const saved=new Map(),calls={save:0,export:0,draft:0};
+const saved=new Map(),calls={save:0,export:0,draft:0,modes:[]};
 const window={scrollY:0,scrollTo(x,y){this.scrollY=y;},utetDesktop:{
  openAntiplagioPeriod(p){return new Promise((resolve,reject)=>pending.push({method:'local',p,resolve,reject}));},
  refreshAntiplagioPeriod(p){return new Promise((resolve,reject)=>pending.push({method:'firebase',p,resolve,reject}));},
  async saveAntiplagioDraft(){calls.draft++;},
  async saveAntiplagioRecord(){calls.save++;throw Error('No se debería escribir en Firebase para descargar un documento sin cambios.');},
- async exportAntiplagioFiles(spec){calls.export++;return {canceled:false,count:spec.files.length,location:'/local'};}
+ async exportAntiplagioFiles(spec){calls.export++;calls.modes.push(spec.mode);return {canceled:false,count:spec.files.length,location:'/local/Descargas'};}
 }};
 const ctx=vm.createContext({window,document,Date,Math,Promise,console,
  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},setTimeout:()=>1,clearTimeout:()=>{}});
@@ -40,6 +40,10 @@ const packet=(p,students,records=[])=>({periodoId:p,students,records,hasCache:tr
  click('ap-one','0102030405');
  await tick();await tick();
  assert.equal(calls.export,1,'Debe exportar desde la copia local');
+ assert.equal(calls.modes[0],'pdfs','Un PDF se descarga como archivo, no como carpeta');
+ click('ap-zip');
+ await tick();await tick();
+ assert.equal(calls.modes[1],'zip','ZIP mantiene la descarga comprimida');
  assert.equal(calls.save,0,'Reimprimir NO escribe ni lee Firebase');
  click('ap-back');
  click('rec-open','plagio-trabajo');

@@ -1,13 +1,13 @@
 {
   "name": "doc-de-titulacion",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "description": "UTET PRO-164: SQLite local-first y Firebase bajo demanda",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check electron/main.js && node --check electron/excel.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js && node --check renderer/records.js && node --check renderer/antiplagio.model.js && node --check renderer/antiplagio.js && node --check electron/firebase-read.js && node --check electron/memo-numbering.js && node --check electron/antiplagio-store.js && node --check electron/antiplagio-local.js",
-    "test": "node tests/institutional.test.cjs && node tests/records.test.cjs && node tests/ui.test.cjs && node tests/antiplagio-auto.test.cjs && node tests/antiplagio.test.cjs && node tests/memo-numbering.test.cjs && node tests/antiplagio-local.test.cjs && node tests/branding.test.cjs",
+    "check": "node --check electron/main.js && node --check electron/excel.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js && node --check renderer/records.js && node --check renderer/antiplagio.model.js && node --check renderer/antiplagio.js && node --check electron/firebase-read.js && node --check electron/memo-numbering.js && node --check electron/antiplagio-store.js && node --check electron/antiplagio-local.js && node --check electron/downloads.js",
+    "test": "node tests/institutional.test.cjs && node tests/records.test.cjs && node tests/ui.test.cjs && node tests/antiplagio-auto.test.cjs && node tests/antiplagio.test.cjs && node tests/memo-numbering.test.cjs && node tests/antiplagio-local.test.cjs && node tests/branding.test.cjs && node tests/downloads.test.cjs",
     "dist:win": "electron-builder --win nsis portable"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.7.1)
+# Doc de Titulación · UTET (Electron v0.7.2)
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
@@ -38,7 +38,7 @@ Cada estudiante seleccionado recibe un memorando distinto; **ya no se emite un c
 - La fecha determinista de presentación es el **día 15 del mes siguiente al cierre del período**, trasladada al lunes siguiente si coincide con sábado o domingo. No contempla otros feriados nacionales. La fecha de memorando y del reporte es la misma y permanece constante al corregir.
 - Los registros nuevos incluyen un ejemplo de maquetación con un porcentaje **simulado** entre 0 y 19,99 % y fuentes ilustrativas. El PDF indica visiblemente que son datos ilustrativos; **no se debe comunicar ni usar como evidencia de un análisis real**. El origen «Dato real» permite incorporar la medición efectiva y su evidencia conforme al procedimiento institucional.
 - No existe casilla «Verificado», vista previa ni cuadro de confirmación final. La interfaz se mantiene compacta.
-- «PDF individuales» guarda archivos por separado dentro de una carpeta elegida. «Descargar ZIP» crea un archivo comprimido con esos mismos documentos. El botón «PDF» junto a un estudiante descarga únicamente ese memorando.
+- «PDF individuales» guarda automáticamente los archivos en la carpeta Descargas de Windows sin abrir selectores. «Descargar ZIP» guarda un único ZIP directamente en Descargas. El botón «PDF» junto a un estudiante descarga únicamente ese memorando. Si el nombre existe, añade (1), (2), etc., sin sobrescribir.
 - Los PDF se generan al descargar, **no se guardan en Firebase ni en SQLite**. Reimprimir un memorando sin cambios usa la copia local, no consulta ni escribe en Firebase.
 
 
@@ -90,7 +90,8 @@ GitHub Actions ejecuta además pruebas de impresión real en Chromium/Electron, 
 - `electron/antiplagio-local.js`: SQLite por período, caché persistente, transacciones, borradores y reemplazos atómicos.
 - `electron/firebase-read.js`: lectura académica Firebase únicamente durante la primera sincronización o actualización explícita.
 - `electron/antiplagio-store.js`: documentos personales, reemplazos y dos contadores transaccionales.
-- `electron/main.js`: operaciones IPC, impresión aislada en PDF, descarga por carpeta y ZIP.
+- `electron/main.js`: operaciones IPC, impresión aislada en PDF, descarga directa de PDF y ZIP a Descargas.
+- `electron/downloads.js`: guardado exclusivo de archivos con nombres únicos y sin sobrescritura.
 - `electron/preload.js`: puente seguro desde la interfaz.
 - `renderer/antiplagio.js`: lectura local, búsqueda sin red, actualización Firebase manual, selección, borradores y descargas.
 - `renderer/antiplagio.model.js`: validación, fuentes, fechas, formato de memorando individual y gráficos.

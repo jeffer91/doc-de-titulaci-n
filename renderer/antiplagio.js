@@ -134,7 +134,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
     (session.saveError?'<p class="ap-error" role="alert">'+esc(session.saveError)+'</p>':'')+
     '<div class="ap-actions ap-exportbar">'+btn('ap-pdfs',session.busy?'Generando...':'PDF individuales','btn btn-primary')+
     btn('ap-zip',session.busy?'Generando...':'Descargar ZIP')+'</div>'+
-    '<p class="ap-mini">Los registros simulados se identifican en el PDF. El guardado requiere permiso de escritura en Firebase.</p></section></div>';
+    '<p class="ap-mini">Los archivos se descargan directamente en Descargas. Los registros simulados se identifican en el PDF.</p></section></div>';
  }
  function addOne(id){
   const student=session.students.find(s=>s.cedula===id);
@@ -181,7 +181,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
     files.push({name,html});
    }
    const result=await window.utetDesktop.exportAntiplagioFiles({mode,files});
-   if(!result?.canceled)showToast(result.count+' memorandos descargados en '+result.location);
+   if(!result?.canceled)showToast(result.count+' memorando(s) descargado(s) en Descargas');
   }catch(error){
    session.saveError=String(error?.message||error).slice(0,320);
    showToast('No se completó la descarga. Si falta Internet, los borradores permanecen en SQLite.');
@@ -201,8 +201,8 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
     session.selected.set(s.cedula,old?{...base,...old,fuentes:{...base.fuentes,...old.fuentes}}:
       {...base,...s,...example,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});}
    });render();}
-  else if(a==='ap-one'){const item=session.selected.get(id);if(item)exportDocs([item],'folder');}
-  else if(a==='ap-pdfs')exportDocs(selected(),'folder');
+  else if(a==='ap-one'){const item=session.selected.get(id);if(item)exportDocs([item],'pdfs');}
+  else if(a==='ap-pdfs')exportDocs(selected(),'pdfs');
   else if(a==='ap-zip')exportDocs(selected(),'zip');
   return true;
  }
