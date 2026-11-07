@@ -25,13 +25,15 @@ jobs:
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --one
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --articulo
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --many
+          xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-acta-articulo.cjs
       - name: Adjuntar PDF ficticio para inspección visual
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: memorandos-control-PRO-164-y-PRO-57
+          name: PDFs-de-control-memorandos-y-acta-AA
           path: |
             ${{ runner.temp }}/utet-pdf-qa/memorando-revision.pdf
             ${{ runner.temp }}/utet-pdf-qa/memorando-articulo-revision.pdf
+            ${{ runner.temp }}/utet-pdf-qa/acta-articulo-academico-control.pdf
           if-no-files-found: ignore
           retention-days: 3
