@@ -11,7 +11,7 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
     students:[],selected:new Map(),source:'',loadedPeriod:'',loading:false,
     query:'',career:'',showSources:'',preview:false,previewHTML:'',
     status:'Consulta no iniciada.',error:'',problems:[],busy:false,
-    firebase:{authenticated:false,email:''}
+    firebase:{authenticated:false,email:''},folio:null,folioStatus:'Consultando numeración...',folioRequest:0
   };
   const meta={codigo:'',destinatario:'',cargoDestinatario:'',
     fecha:at(),fechaCorte:at(),herramienta:''};
@@ -27,9 +27,28 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
     session.query='';session.career='';session.preview=false;session.previewHTML='';
     session.error='';session.problems=[];session.status='Consulta no iniciada.';
   }
+  async function refreshFolio(){
+    const date=meta.fecha,request=++session.folioRequest;
+    meta.codigo='';session.folio=null;
+    session.folioStatus='Consultando siguiente consecutivo...';session.preview=false;
+    render();
+    try{
+      if(!window.utetDesktop?.previewMemoNumber)
+        throw new Error('Actualiza Electron para numerar memorandos.');
+      const next=await window.utetDesktop.previewMemoNumber(date);
+      if(request!==session.folioRequest||date!==meta.fecha)return;
+      session.folio=next;meta.codigo=next.code;
+      session.folioStatus='Número provisional. Se reserva al confirmar la exportación.';
+    }catch(e){
+      if(request!==session.folioRequest)return;
+      session.folioStatus=String(e.message||e);
+    }
+    render();
+  }
   function open(){
     if(session.loadedPeriod && session.loadedPeriod!==state.periodId)clearPeriod();
     go('antiplagio');
+    refreshFolio();
   }
   const button=(action,label,cls='btn',id='')=>'<button type="button" class="'+cls+'" data-action="'+action+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+label+'</button>';
   const input=(label,key,opts={})=>'<label class="ap-label">'+esc(label)+
@@ -78,10 +97,15 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
         '<td>'+button('ap-remove','Quitar','btn btn-small',r.cedula)+'</td></tr>').join('')+'</tbody></table></div>';
   }
   function configuration(){
-    return '<div class="ap-form-grid">'+input('Código real del memorando','codigo',{placeholder:'MEM-ITSQMET-UTET-...'})+
+    return '<div class="ap-form-grid">'+
+      input('Fecha del memorando','fecha',{type:'date'})+
+      '<div class="ap-label"><span>Numeración mensual automática · UTET</span>'+
+      '<div class="ap-code-field"><strong>No. '+esc(meta.codigo||'Pendiente de consulta')+'</strong></div>'+
+      '<small class="ap-mini">'+esc(session.folioStatus)+'</small></div>'+
+      input('Fecha de corte','fechaCorte',{type:'date'})+
       input('Autoridad destinataria','destinatario')+input('Cargo del destinatario','cargoDestinatario')+
-      input('Fecha del memorando','fecha',{type:'date'})+input('Fecha de corte','fechaCorte',{type:'date'})+
       input('Herramienta común (si está documentada)','herramienta',{placeholder:'Opcional; según evidencia'})+'</div>'+
+      '<p class="ap-mini">El número XX se incrementa entre memorandos del mismo mes y vuelve a 01 en cada mes nuevo, tomando la fecha de emisión (AAAA-MM-DD). Se conserva únicamente en este equipo; no se garantiza coincidencia con memorandos emitidos desde otros equipos o fuera de la app.</p>'+
       '<p class="ap-mini">Remitente fijo: MSc. Jefferson Edgar Villarreal Enríquez — Coordinador de Titulación. El espacio de firma permanece sin firmar.</p>';
   }
   function renderView(){
@@ -159,13 +183,19 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
     if(!window.utetDesktop?.exportPDF){showToast('Se requiere Electron para exportar el PDF.');return;}
     session.busy=true;render();
     try{
-      const html=M.renderPDF(meta,rows,period().label);
+      // El PDF definitivo nunca usa el número provisional: Electron asigna
+      // el siguiente folio en el instante de emitir y sustituye el marcador.
+      const provisional=M.renderPDF({...meta,codigo:'UTET_MEMO_CODE_PENDING'},rows,period().label);
       const name='MEM_ANTIPLAGIO_'+M.escapeFilename(state.periodId)+'_'+
         M.escapeFilename(meta.fecha)+'_'+M.escapeFilename(meta.codigo);
       const out=await window.utetDesktop.exportPDF({
-        html,suggestedName:name,kind:'antiplagio'
+        html:provisional,suggestedName:name,kind:'antiplagio',memoDate:meta.fecha
       });
-      if(!out?.canceled)showToast('PDF institucional generado. El archivo requiere tu firma válida.');
+      if(!out?.canceled){
+        showToast('PDF generado · No. '+out.memoCode+'. El documento requiere tu firma válida.');
+        session.preview=false;session.previewHTML='';
+        await refreshFolio();
+      }
     }catch(e){errorMessage(e)}
     finally{session.busy=false;render();}
   }
@@ -205,7 +235,11 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
   function inputChange(e){
     const target=e.target;
     const key=target.dataset?.apMeta;
-    if(key && Object.prototype.hasOwnProperty.call(meta,key)){meta[key]=target.value;session.preview=false;}
+    if(key && key!=='codigo' && Object.prototype.hasOwnProperty.call(meta,key)){
+      const changed=meta[key]!==target.value;
+      meta[key]=target.value;session.preview=false;
+      if(key==='fecha'&&changed){refreshFolio();return;}
+    }
     const id=target.dataset?.apId,r=session.selected.get(id);
     if(r){
       if(target.dataset?.apField){
