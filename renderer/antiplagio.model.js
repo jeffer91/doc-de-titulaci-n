@@ -97,8 +97,20 @@
         evaluated:rows.filter(r=>['detected','not-detected'].includes(r.fuentes?.[s.key])).length}))};
   }
   const escapeFilename=x=>t(x).replace(/[^\p{L}\p{N}_.-]/gu,'_').slice(0,85);
+  // Gráficos vectoriales autocontenidos: colores activos únicamente con evidencia.
+  const glyphs={
+    google:'<svg viewBox="0 0 48 48"><path fill="#4285F4" d="M43 24.5c0-1.4-.1-2.8-.4-4.1H24v7.9h10.6c-.5 2.5-1.9 4.7-4 6.1v5h6.5C40.9 35.9 43 30.8 43 24.5Z"/><path fill="#34A853" d="M24 44c5.4 0 9.9-1.8 13.1-4.6l-6.5-5c-1.8 1.2-4.1 1.9-6.6 1.9-5.1 0-9.4-3.5-11-8.2H6.3v5.2C9.5 39.2 16.2 44 24 44Z"/><path fill="#FBBC05" d="M13 28.1c-.4-1.2-.6-2.6-.6-4.1s.2-2.9.6-4.1v-5.2H6.3A20 20 0 0 0 4 24c0 3.3.8 6.5 2.3 9.3l6.7-5.2Z"/><path fill="#EA4335" d="M24 11.7c2.9 0 5.5 1 7.6 3l5.7-5.7A19.6 19.6 0 0 0 24 4C16.2 4 9.5 8.8 6.3 15.7l6.7 5.2c1.6-4.7 5.9-9.2 11-9.2Z"/></svg>',
+    web:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-6 6-6 12 0 18M12 3c6 6 6 12 0 18"/></svg>',
+    repositorios:'<svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5-10-5Zm4 3v5c4 4 8 4 12 0v-5M22 9v8"/></svg>',
+    publicaciones:'<svg viewBox="0 0 24 24"><path d="M12 6c-4-3-7-3-10-2v15c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-6-1-10 2Zm0 0v15"/></svg>',
+    documentos:'<svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2Zm9 0v5h5M9 12h8M9 16h8"/></svg>',
+    trabajos:'<svg viewBox="0 0 24 24"><path d="M8 4h11v16H8zM5 8H3v14h12v-2M11 9h5M11 13h5"/></svg>'
+  };
+  const glyph=key=>glyphs[key]||'';
   const spans=(s)=>SOURCE_TYPES.filter(k=>s?.[k.key]==='detected'||s?.[k.key]==='not-detected')
-    .map(k=>'<span class="ap-src '+(s[k.key]==='detected'?'ap-src-on':'ap-src-off')+'" title="'+E(k.label)+'">'+E(k.symbol)+'</span>').join('');
+    .map(k=>'<span class="ap-src ap-src-'+k.key+' '+(s[k.key]==='detected'?'ap-src-on':'ap-src-off')+'" title="'+E(k.label)+'">'+glyph(k.key)+'</span>').join('');
+  const sourceLegend=()=>'<div class="ap-source-legend">'+SOURCE_TYPES.map(k=>'<span>'+
+    '<span class="ap-src ap-src-on ap-src-'+k.key+'">'+glyph(k.key)+'</span>'+E(k.label)+'</span>').join('')+'</div>';
   function metaBlock(meta,period){
     return '<dl class="ap-details">'+
       '<div><dt>Período académico</dt><dd>'+E(period)+'</dd></div>'+
@@ -222,7 +234,7 @@
     if(compact){
       // Caso de aceptación: 1 estudiante = memorando y reporte en exactamente 2 páginas.
       pages[1].body += graphBands(data)+graphSources(data)+
-        '<h2>Fuentes verificadas para el estudiante</h2><div class="ap-source-index">'+
+        '<h2>Fuentes verificadas para el estudiante</h2>'+sourceLegend()+'<div class="ap-source-index">'+
         '<div><strong>'+E(rows[0].nombres)+'</strong><span>'+spans(rows[0].fuentes)+'</span></div></div>';
     }else{
       pages.push(page(reportPage(graphBands(data)+graphConditions(data)+
@@ -238,7 +250,7 @@
           pages.push(page(reportPage((i===0?graphSources(data):'')+
             '<h2>Indicadores de fuentes por estudiante'+(i?' (continuación)':'')+'</h2>'+
             '<p class="ap-caption">Activo: fuente detectada en evidencia. Gris: no detectada según evidencia. Sin información: no se presume ausente.</p>'+
-            '<div class="ap-source-index">'+group.map(r=>'<div><strong>'+E(r.nombres)+'</strong><span>'+spans(r.fuentes)+'</span></div>').join('')+
+            sourceLegend()+'<div class="ap-source-index">'+group.map(r=>'<div><strong>'+E(r.nombres)+'</strong><span>'+spans(r.fuentes)+'</span></div>').join('')+
             '</div>',meta,periodLabel,false),'ap-chart-page'));
         }
       }else{
