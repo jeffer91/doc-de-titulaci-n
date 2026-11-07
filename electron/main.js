@@ -106,7 +106,7 @@ function validateAntiplagioExport(spec){
  if(!spec||!Array.isArray(spec.files)||!['folder','zip'].includes(spec.mode)||!spec.files.length||spec.files.length>500)throw Error('Selección de memorandos inválida (1 a 500).');
  for(const file of spec.files){
    if(typeof file.html!=='string'||file.html.length>MAX_HTML||!file.html.includes('class="institutional-document'))throw Error('Contenido PDF inválido.');
-   if(typeof file.name!=='string'||file.name.length>120||!/^[-_\\p{L}\\p{N} .]+\\.pdf$/u.test(file.name))throw Error('Nombre de PDF inválido.');
+   if(typeof file.name!=='string'||file.name.length>120||!/^[-_\p{L}\p{N} .]+\.pdf$/u.test(file.name))throw Error('Nombre de PDF inválido.');
  }
 }
 async function exportAntiplagio(event,spec){
@@ -131,7 +131,7 @@ async function exportAntiplagio(event,spec){
    const names=new Set();
    let index=0;
    for(const file of spec.files){
-     const name=file.name.replace(/[\\/]/g,'_');
+     const name=file.name.replace(/[\/]/g,'_');
      if(names.has(name))throw Error('Nombre de PDF duplicado: '+name);
      names.add(name);
      const inputFile=path.join(tempDir,'p'+index+'.html');index++;
