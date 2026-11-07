@@ -174,3 +174,56 @@
  .ap-compact .ap-form-compact{grid-template-columns:repeat(2,minmax(0,1fr))}
  .ap-compact .ap-title h1{font-size:18px}
 }
+
+/* Memorando individual PRO-164: tarjetas, resultados y fuentes. */
+.ap-personal-page .ap-memo-title{font-size:11.5pt;margin:3mm 0 4mm}
+.ap-personal-page .ap-memo-header,.ap-personal-report .ap-memo-header{height:15mm;margin-bottom:4mm}
+.ap-personal-page .ap-memo-header img,.ap-personal-report .ap-memo-header img{max-height:13mm}
+.ap-personal-page .ap-memo-fields{font-size:8pt;margin-bottom:4mm}
+.ap-personal-page .ap-memo-fields th,.ap-personal-page .ap-memo-fields td{padding:1.4mm}
+.ap-intro{font-size:8.6pt;line-height:1.32;margin:2mm 0 4mm}
+.ap-personal-card{border:1px solid #ccd9e9;border-radius:3mm;padding:3mm 4mm;margin:3mm 0;page-break-inside:avoid}
+.ap-personal-card h2{margin:0 0 2.5mm;color:#244365;font-size:9.3pt;border-bottom:1px solid #e1e8f1;padding-bottom:1.4mm}
+.ap-personal-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.3mm 7mm}
+.ap-detail{min-width:0;display:flex;flex-direction:column;gap:.5mm;font-size:8.3pt;overflow-wrap:anywhere}
+.ap-detail span{color:#5f7085;font-size:7pt}
+.ap-detail strong{color:#1d3652}
+.ap-personal-score{display:flex;align-items:center;justify-content:space-between;gap:8mm;margin:2mm 0}
+.ap-personal-score div:first-child{display:flex;flex-direction:column;gap:1mm}
+.ap-personal-score div:first-child strong{font-size:20pt;color:#163f70}
+.ap-personal-score div:first-child span{font-size:7.5pt;color:#66788c}
+.ap-status-approved,.ap-status-rejected{font-size:10pt;font-weight:800;padding:2mm 4mm;border-radius:2mm}
+.ap-status-approved{color:#13684e;border:1px solid #9ecbbd;background:#eaf7f1}
+.ap-status-rejected{color:#9f312c;border:1px solid #e4b4ac;background:#fff1ee}
+.ap-personal-card .ap-track,.ap-personal-report .ap-track{height:3.5mm;border-radius:3mm;background:#e7edf4;overflow:hidden;position:relative}
+.ap-personal-card .ap-fill,.ap-personal-report .ap-fill{height:100%;display:block;background:#2e6aac}
+.ap-personal-card .ap-caption{margin:2mm 0 0;font-size:7pt}
+.ap-conclusion{font-size:8.7pt;line-height:1.38;margin-top:4mm}
+.ap-conclusion strong{color:#1a426c;font-size:9pt}
+.ap-conclusion p{margin:1.4mm 0}
+.ap-personal-page .ap-signature{margin-top:4mm;gap:1mm;font-size:8pt}
+.ap-personal-page .ap-signature p{margin:0}
+.ap-personal-page .ap-sign-space{height:10mm}
+.ap-personal-report h1{text-align:center;font-size:13pt;color:#21486b;margin:4mm 0 2mm}
+.ap-personal-report .ap-subtitle{text-align:center;font-size:9pt}
+.ap-personal-report .ap-personal-card{margin-top:7mm}
+.ap-personal-report .ap-long-track{margin:4mm 0 6mm;height:6mm}
+.ap-personal-report .ap-share{display:flex;align-items:center;gap:9mm}
+.ap-personal-report .ap-donut{flex-shrink:0}
+.ap-personal-report .ap-share p{font-size:9pt;line-height:1.5}
+.ap-personal-sources{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:5mm 0}
+.ap-personal-sources>div{display:flex;gap:2mm;align-items:center;padding:3mm;border:1px solid #d9e1eb;border-radius:2mm;font-size:7.8pt}
+.ap-personal-sources strong{flex:1}
+.ap-personal-sources>div>span:last-child{font-size:7pt;color:#657386}
+.ap-source-dot{display:inline-block;width:3mm;height:3mm;flex-shrink:0;border-radius:100%;background:#b7c0cc}
+.ap-source-dot.active{background:#317bb2}
+.ap-demo-label{color:#8a541a;border:1px solid #ddbc84;background:#fff9ec;padding:1.5mm 3mm;font-size:7.2pt;font-weight:700;letter-spacing:.2px;margin:2mm 0}
+.ap-workspace .ap-error{font-size:11.5px;padding:8px;margin:6px 0;border:1px solid #e6b9b9;border-radius:6px}
+.ap-workspace .ap-row-footer{display:flex;justify-content:space-between;align-items:center;padding:6px 2px}
+.ap-filterbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ap-filterbar input,.ap-filterbar select{border:1px solid #cfdaea;border-radius:7px;padding:7px;font-size:12px;min-width:165px}
+.ap-filterbar input{flex:1}
+.ap-workspace .ap-name small,.ap-workspace .ap-identity small,.ap-workspace .ap-edit-table td small{display:block;margin-top:3px;color:#728096;font-size:10px}
+.ap-workspace .ap-edit-table{min-width:850px}
+.ap-workspace .ap-exportbar{padding-top:4px}
+@media(max-width:620px){.ap-filterbar>*{flex:1}.ap-personal-grid{grid-template-columns:1fr 1fr}}
