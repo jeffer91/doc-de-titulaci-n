@@ -1,46 +1,81 @@
 'use strict';
-/* PRO-164: memorandos individuales; almacenamiento Firebase y descarga sin vista previa. */
+/* PRO-164: consulta SQLite local-first. Firebase solo primera carga o actualización explícita. */
 window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
  const {state,period,go,render,showToast}=ctx,M=window.UTET_ANTIPLAGIO_MODEL;
  const esc=M.E, $=id=>document.getElementById(id);
  const normal=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
- const session={students:[],selected:new Map(),saved:new Map(),loadedPeriod:'',loading:false,request:0,
-  query:'',career:'',busy:false,error:'',saveError:'',status:'Sin consultar',problems:[],showSources:''};
+ const session={students:[],selected:new Map(),saved:new Map(),dirty:new Set(),draftTimers:new Map(),draftWrites:new Map(),
+  loadedPeriod:'',loading:false,request:0,syncedAt:null,source:'',warning:'',
+  query:'',career:'',busy:false,error:'',saveError:'',status:'Sin datos locales',problems:[],showSources:''};
  const selected=()=>[...session.selected.values()];
  const filtered=()=>session.students.filter(s=>(!session.career||s.carreraNombre===session.career)&&
   (!session.query||normal(s.nombres+' '+s.cedula+' '+s.carreraNombre).includes(normal(session.query))));
  const btn=(action,label,css='btn btn-small',id='')=>'<button type="button" class="'+css+'" data-action="'+action+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+label+'</button>';
- function reset(){
-  session.request++;session.students=[];session.selected.clear();session.saved.clear();
-  session.loadedPeriod='';session.loading=false;session.query='';session.career='';session.error='';
-  session.saveError='';session.status='Sin consultar';session.problems=[];session.showSources='';
+
+ function payload(row,p=state.periodId){
+  return {...row,periodoId:p,estudianteId:p+'__'+row.cedula,
+   periodoNombre:row.periodoNombre||period().label,
+   fecha:row.fecha||M.periodDate(p),versionPlantilla:row.versionPlantilla||'2'};
  }
- function open(){if(session.loadedPeriod&&session.loadedPeriod!==state.periodId)reset();go('antiplagio');if(session.loadedPeriod!==state.periodId&&!session.loading)load();}
+ function saveLocalDraft(row,p=state.periodId){
+  if(!window.utetDesktop?.saveAntiplagioDraft)return Promise.resolve();
+  const snapshot=payload(row,p);
+  const promise=window.utetDesktop.saveAntiplagioDraft(snapshot).catch(error=>{
+   if(p===state.periodId){session.saveError='No se pudo guardar el borrador local: '+String(error.message||error).slice(0,160);}
+  });
+  session.draftWrites.set(p+'__'+row.cedula,promise);
+  promise.finally(()=>{if(session.draftWrites.get(p+'__'+row.cedula)===promise)session.draftWrites.delete(p+'__'+row.cedula);});
+  return promise;
+ }
+ function scheduleDraft(row){
+  const p=state.periodId,id=p+'__'+row.cedula;
+  if(session.draftTimers.has(id))clearTimeout(session.draftTimers.get(id).timer);
+  const timer=setTimeout(()=>{session.draftTimers.delete(id);saveLocalDraft(row,p);},450);
+  session.draftTimers.set(id,{timer,row,p});
+ }
+ function flushDraftTimers(){
+  for(const [id,item] of session.draftTimers){clearTimeout(item.timer);saveLocalDraft(item.row,item.p);}
+  session.draftTimers.clear();
+ }
+ function reset(){
+  flushDraftTimers();
+  session.request++;session.students=[];session.selected.clear();session.saved.clear();session.dirty.clear();
+  session.loadedPeriod='';session.loading=false;session.query='';session.career='';session.error='';
+  session.saveError='';session.status='Sin datos locales';session.problems=[];session.showSources='';
+  session.syncedAt=null;session.source='';session.warning='';
+ }
+ function open(){
+  if(session.loadedPeriod&&session.loadedPeriod!==state.periodId)reset();
+  go('antiplagio');
+  if(session.loadedPeriod!==state.periodId&&!session.loading)load();
+ }
  function onPeriodChange(){reset();go('antiplagio');load();}
  async function load(force=false){
-  const target=state.periodId;
   if(session.loading)return;
-  if(force&&session.selected.size)session.status='Actualizando; se perderán cambios no guardados.';
-  const ticket=++session.request;session.loading=true;session.error='';session.status='Cargando estudiantes...';render();
+  const target=state.periodId,ticket=++session.request;
+  session.loading=true;session.error='';
+  session.status=force?'Actualizando Firebase...':'Abriendo base local...';
+  render();
   try{
-   if(!window.utetDesktop?.loadAntiplagioStudents)throw Error('Actualiza Electron para consultar Firebase.');
-   const data=await window.utetDesktop.loadAntiplagioStudents(target);
+   const api=force?window.utetDesktop?.refreshAntiplagioPeriod:window.utetDesktop?.openAntiplagioPeriod;
+   if(!api)throw Error('Actualiza Electron para utilizar la base SQLite local.');
+   const data=await api(target);
    if(ticket!==session.request||target!==state.periodId)return;
-   if(data?.periodoId!==target||!Array.isArray(data.students))throw Error('Respuesta de estudiantes inválida.');
-   session.students=data.students;session.loadedPeriod=target;
-   // La lectura de memorandos se realiza en otra colección; las fichas académicas no se modifican.
-   if(window.utetDesktop?.getAntiplagioRecords){
-    try{
-     const records=await window.utetDesktop.getAntiplagioRecords(target);
-     if(ticket!==session.request||target!==state.periodId)return;
-     session.saved=new Map(records.filter(x=>x?.cedula&&x.periodoId===target).map(x=>[x.cedula,x]));
-    }catch(error){session.error='No fue posible recuperar memorandos guardados: '+String(error.message||error).slice(0,210);}
-   }
-   session.selected.clear();session.status=session.students.length+' estudiantes · '+session.saved.size+' memorandos guardados';
+   if(data?.periodoId!==target||!Array.isArray(data.students)||!Array.isArray(data.records))
+     throw Error('La base local devolvió una respuesta inválida.');
+   session.students=data.students;
+   session.saved=new Map(data.records.filter(x=>x?.cedula&&x.periodoId===target).map(x=>[x.cedula,x]));
+   session.loadedPeriod=target;session.syncedAt=data.syncedAt||null;
+   session.source=data.source||'SQLite local';
+   session.warning=data.warning||'';
+   // Conservar los documentos seleccionados y sus cambios locales al actualizar.
+   session.status=session.students.length+' estudiantes · '+session.saved.size+' memorandos · '+session.source;
+   if(force)showToast('Datos del período actualizados en SQLite.');
   }catch(error){
    if(ticket!==session.request||target!==state.periodId)return;
-   session.students=[];session.loadedPeriod='';session.error=String(error?.message||error).slice(0,280);
-   session.status='Consulta no disponible';
+   session.error=String(error?.message||error).slice(0,280);
+   if(session.loadedPeriod===target)session.status='Datos locales disponibles · error de actualización';
+   else{session.students=[];session.saved.clear();session.status='No hay copia local disponible';}
   }finally{if(ticket===session.request){session.loading=false;render();}}
  }
  function studentRow(s){
@@ -84,7 +119,9 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   const n=session.selected.size;
   return '<div class="ap-workspace ap-compact"><div class="ap-title"><h1>Antiplagio <span>· PRO-164</span></h1>'+
     '<div class="ap-actions"><span class="ap-connect'+(session.loadedPeriod===state.periodId?' ready':'')+'">'+esc(session.status)+'</span>'+btn('ap-back','Volver','ap-link')+'</div></div>'+
-    '<section class="ap-panel"><div class="ap-section-head"><h2>Estudiantes · '+esc(period().label)+'</h2>'+btn('ap-refresh','Actualizar')+'</div>'+
+    '<section class="ap-panel"><div class="ap-section-head"><h2>Estudiantes · '+esc(period().label)+'</h2>'+btn('ap-refresh',session.loading?'Actualizando...':'Actualizar Firebase')+'</div>'+
+    '<p class="ap-mini">Última sincronización: '+esc(session.syncedAt?new Date(session.syncedAt).toLocaleString('es-EC'):'Todavía no sincronizado')+' · Los filtros usan SQLite local.</p>'+
+    (session.warning?'<p class="ap-note ap-warning">'+esc(session.warning)+'</p>':'')+
     (session.error?'<p class="ap-error" role="alert">'+esc(session.error)+'</p>':'')+searchBlock()+
     '<div class="ap-section-head ap-subsection"><h2>Memorandos seleccionados</h2><span class="ap-pill">'+n+'</span></div>'+editTable()+'</section>'+
     '<section class="ap-panel ap-panel-output"><div class="ap-section-head"><h2>Descargas</h2><span class="ap-mini">Fecha de emisión: '+esc(M.day(M.periodDate(state.periodId)))+'</span></div>'+
@@ -104,29 +141,45 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
    session.selected.set(id,stored?{...base,...stored,fuentes:{...base.fuentes,...stored.fuentes}}:
      {...base,...student,...specimen,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});
   }
+  if(session.selected.get(id)?.syncStatus==='pendiente')session.dirty.add(id);
   session.saveError='';render();
  }
+
  async function exportDocs(rows,mode){
   if(session.busy||!rows.length)return;
-  if(!window.utetDesktop?.saveAntiplagioRecord||!window.utetDesktop?.exportAntiplagioFiles){session.saveError='Actualiza Electron antes de generar memorandos.';render();return;}
+  if(!window.utetDesktop?.saveAntiplagioRecord||!window.utetDesktop?.exportAntiplagioFiles){
+   session.saveError='Actualiza Electron antes de generar memorandos.';render();return;
+  }
+  const p=state.periodId;
   session.busy=true;session.saveError='';render();
   try{
    const files=[];
    for(const row of rows){
+    if(state.periodId!==p)throw Error('El período cambió durante la exportación.');
     if(M.number(row.similitud)===null)throw Error('Porcentaje inválido para '+row.nombres);
-    const saved=await window.utetDesktop.saveAntiplagioRecord({...row,periodoId:state.periodId,
-      estudianteId:state.periodId+'__'+row.cedula,periodoNombre:period().label,
-      fecha:row.fecha||M.periodDate(state.periodId),versionPlantilla:'2'});
-    row.folio=saved.folio;row.referencia=saved.referencia;row.fecha=saved.fecha;
-    session.saved.set(row.cedula,{...row});
+    const id=p+'__'+row.cedula,timer=session.draftTimers.get(id);
+    if(timer){clearTimeout(timer.timer);session.draftTimers.delete(id);}
+    if(session.draftWrites.has(id))await session.draftWrites.get(id);
+    const needsSync=!row.folio||!row.referencia||session.dirty.has(row.cedula)||row.syncStatus==='pendiente';
+    if(needsSync){
+     // Solo los documentos nuevos o modificados escriben en Firebase.
+     // Los ya emitidos se reconstruyen desde SQLite, incluso sin conexión.
+     const official=await window.utetDesktop.saveAntiplagioRecord(payload(row,p));
+     row.folio=official.folio;row.referencia=official.referencia;row.fecha=official.fecha;
+     row.syncStatus='sincronizado';
+     session.dirty.delete(row.cedula);
+     session.saved.set(row.cedula,{...row});
+    }
     const html=M.individualHTML(row,{},period().label);
-    const name=('MEM_'+saved.folio.replace(/[^A-Za-z0-9._-]/g,'_')+'_'+row.cedula+'.pdf').slice(0,120);
+    const name=('MEM_'+row.folio.replace(/[^A-Za-z0-9._-]/g,'_')+'_'+row.cedula+'.pdf').slice(0,120);
     files.push({name,html});
    }
    const result=await window.utetDesktop.exportAntiplagioFiles({mode,files});
-   if(!result?.canceled)showToast(result.count+' memorandos guardados en '+result.location);
-  }catch(error){session.saveError=String(error?.message||error).slice(0,320);showToast('No se completó la operación.');}
-  finally{session.busy=false;render();}
+   if(!result?.canceled)showToast(result.count+' memorandos descargados en '+result.location);
+  }catch(error){
+   session.saveError=String(error?.message||error).slice(0,320);
+   showToast('No se completó la descarga. Si falta Internet, los borradores permanecen en SQLite.');
+  }finally{session.busy=false;render();}
  }
  function handleAction(a,id){
   if((a==='rec-open'||a==='new-doc')&&id==='plagio-trabajo'){open();return true;}
@@ -159,6 +212,10 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
      if(label)label.textContent=M.number(row.similitud)!==null&&M.number(row.similitud)<20?'APROBADO':'NO APROBADO';}
   }
   if(t.dataset.apSource)row.fuentes[t.dataset.apSource]=t.value;
+  if(t.dataset.apField||t.dataset.apSource){
+   row.syncStatus='pendiente';session.dirty.add(row.cedula);
+   scheduleDraft(row);
+  }
   session.saveError='';
  }
  return {open,onPeriodChange,reset,load,render:renderView,handleAction,input,session};
