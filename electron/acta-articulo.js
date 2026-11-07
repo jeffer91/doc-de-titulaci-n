@@ -65,8 +65,8 @@ async function openPeriod(periodoId,baseDir,loadStudents){
   await Local.replaceFromFirebase(baseDir,periodoId,remote.students,null,remote.readAt,'trabajo');
   roster=await Local.snapshot(baseDir,periodoId,'trabajo');
  }
- const actas=await Local.loadActas(baseDir,periodoId);
- return {periodoId,students:roster.students,actas,source:roster.source,syncedAt:roster.syncedAt,
+ const [actas,evidences]=await Promise.all([Local.loadActas(baseDir,periodoId),Local.listActaEvidences(baseDir,periodoId)]);
+ return {periodoId,students:roster.students,actas,evidences,emision:Dates.forPeriod(periodoId),source:roster.source,syncedAt:roster.syncedAt,
   count:roster.students.length};
 }
 async function refreshStudents(periodoId,baseDir,loadStudents){
