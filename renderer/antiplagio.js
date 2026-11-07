@@ -116,7 +116,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
    selected().map(row=>{
     const norm=M.normalizeCareer(row.carreraNombre,row.modalidad);
     return '<tr><td class="ap-identity"><strong>'+esc(row.nombres)+'</strong><small>'+esc(row.cedula)+' · '+esc(norm.carrera)+' · '+esc(norm.modalidad)+'</small></td>'+
-     '<td><input type="text" inputmode="decimal" data-ap-id="'+esc(row.cedula)+'" data-ap-field="similitud" value="'+esc(row.similitud)+'"><small class="ap-status">'+esc(M.number(row.similitud)!==null&&M.number(row.similitud)<20?'APROBADO':'NO APROBADO')+'</small></td>'+
+     '<td><input type="text" inputmode="decimal" data-ap-id="'+esc(row.cedula)+'" data-ap-field="similitud" value="'+esc(row.similitud)+'"><small class="ap-status">'+esc(M.number(row.similitud)!==null&&(session.tipoDocumento==='articulo'?M.number(row.similitud)<=20:M.number(row.similitud)<20)?'APROBADO':'NO APROBADO')+'</small></td>'+
      '<td><select data-ap-id="'+esc(row.cedula)+'" data-ap-field="origen"><option value="simulado"'+(row.origen==='simulado'?' selected':'')+'>Simulación</option><option value="real"'+(row.origen==='real'?' selected':'')+'>Dato real</option></select></td>'+
      '<td><small>'+esc(row.folio||'Sin emitir')+'</small><small>'+esc(row.referencia||'Referencia por asignar')+'</small></td>'+
      '<td>'+btn('ap-sources',session.showSources===row.cedula?'Ocultar':'Fuentes','ap-link',row.cedula)+(session.showSources===row.cedula?sources(row):'')+'</td>'+
@@ -219,7 +219,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   if(t.dataset.apField){
    if(t.dataset.apField==='similitud'||t.dataset.apField==='origen')row[t.dataset.apField]=t.value;
    if(t.dataset.apField==='similitud'){const label=t.closest('td')?.querySelector('.ap-status');
-     if(label)label.textContent=M.number(row.similitud)!==null&&M.number(row.similitud)<20?'APROBADO':'NO APROBADO';}
+     if(label)label.textContent=M.number(row.similitud)!==null&&(session.tipoDocumento==='articulo'?M.number(row.similitud)<=20:M.number(row.similitud)<20)?'APROBADO':'NO APROBADO';}
   }
   if(t.dataset.apSource)row.fuentes[t.dataset.apSource]=t.value;
   if(t.dataset.apField||t.dataset.apSource){

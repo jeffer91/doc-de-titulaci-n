@@ -312,15 +312,15 @@
     const documento=esArticulo?'artículo académico':'trabajo de titulación';
     const objeto=esArticulo?'artículo académico':'trabajo';
     const asunto=esArticulo?'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL ARTÍCULO ACADÉMICO':'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL TRABAJO DE TITULACIÓN';
-    const n=number(row.similitud),ok=n!==null&&n<20;
+    const n=number(row.similitud),ok=n!==null&&(esArticulo?n<=20:n<20);
     const norm=normalizeCareer(row.carreraNombre,row.modalidad),sourceFlags=row.fuentes||{};
     const values=SOURCE_TYPES.map(x=>({key:x.key,label:x.label,active:sourceFlags[x.key]==='detected',state:sourceFlags[x.key]||'unknown'}));
     const ratio=n===null?0:n,display=pformat(row.similitud);
     const result=n===null?'SIN RESULTADO':ok?'APROBADO':'NO APROBADO';
     const conclusion=n===null?'No se dispone de un resultado para emitir una conclusión.':
-      ok?'El índice registrado es inferior al 20 %, por lo que el '+documento+' cumple el criterio de similitud establecido.':
-      'El índice registrado es igual o superior al 20 %, por lo que el '+documento+' NO APROBADO requiere corregir las coincidencias identificadas y presentar nuevamente el '+documento+' para un nuevo análisis.';
-    const comparison=n===null?'no determinado':ok?'inferior':'igual o superior';
+      ok?'El índice registrado es '+(esArticulo?'igual o inferior':'inferior')+' al 20 %, por lo que el '+documento+' cumple el criterio de similitud establecido.':
+      'El índice registrado es '+(esArticulo?'superior':'igual o superior')+' al 20 %, por lo que el '+documento+' NO APROBADO requiere corregir las coincidencias identificadas y presentar nuevamente el '+documento+' para un nuevo análisis.';
+    const comparison=n===null?'no determinado':ok?(esArticulo&&n===20?'igual':'inferior'):(esArticulo?'superior':'igual o superior');
     const resolution=n===null?'NO DISPONE DE RESULTADO':ok?'CUMPLE CON EL CRITERIO DE SIMILITUD':'NO CUMPLE CON EL CRITERIO DE SIMILITUD';
     const disposition=n===null?'por lo que queda pendiente de revisión':
       ok?'por lo que obtiene un resultado aprobado respecto de este requisito':
@@ -361,7 +361,7 @@
         '<div class="ap-personal-score"><div><strong>'+E(display)+'</strong><span>Índice de similitud</span></div>'+
         '<div class="'+(ok?'ap-status-approved':'ap-status-rejected')+'">'+E(result)+'</div></div>'+
         '<div class="ap-track ap-long-track"><span class="ap-fill" style="width:'+ratio+'%"></span></div>'+
-        '<p class="ap-caption">Criterio aplicado: menor de 20 %. La similitud no determina por sí sola plagio.</p>'+
+        '<p class="ap-caption">Criterio aplicado: '+(esArticulo?'máximo 20,00 % (inclusive)':'menor de 20 %')+'. La similitud no determina por sí sola plagio.</p>'+
         '<div class="ap-share"><div class="ap-donut" style="--ap-value:'+ratio+'%"><span>'+E(display)+'</span></div>'+
         '<p>Distribución general del índice de similitud frente al contenido del '+E(documento)+' analizado.</p></div></div>'+
       '<div class="ap-personal-card"><h2>3. Fuentes consideradas</h2>'+
