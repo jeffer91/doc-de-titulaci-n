@@ -95,7 +95,9 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
       if(request!==session.loadRequest||state.periodId!==target)return;
       session.students=[];session.loadedPeriod='';
       session.status='No disponible';
-      session.error=String(error?.message||error);
+      session.error=String(error?.message||error)
+        .replace(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/,'')
+        .slice(0,420);
     }finally{
       if(request===session.loadRequest && state.periodId===target){
         session.loading=false;session.loadingPeriod='';render();
