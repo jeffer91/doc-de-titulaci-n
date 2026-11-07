@@ -176,7 +176,7 @@ async function markSynced(baseDir,record){
 }
 function verifyActaIdentity(periodoId,cedula){
  key(periodoId,cedula);
- if(!/^\\d{10}$/.test(cedula))throw Error('Cédula de diez dígitos requerida para el acta.');
+ if(!/^\d{10}$/.test(cedula))throw Error('Cédula de diez dígitos requerida para el acta.');
 }
 async function loadActas(baseDir,periodoId){
  if(!validPeriod(periodoId))throw Error('Período de actas inválido.');
@@ -194,7 +194,7 @@ async function getActa(baseDir,periodoId,cedula){
  });
 }
 async function saveActa(baseDir,record){
- if(!record||!/^AA-\\d{4}-\\d{4}-(0[1-9]|1[0-2])-\\d{4}$/.test(String(record.numeroActa||'')))
+ if(!record||!/^AA-\d{4}-\d{4}-(0[1-9]|1[0-2])-\d{4}$/.test(String(record.numeroActa||'')))
   throw Error('Número oficial AA inválido.');
  verifyActaIdentity(record.periodoId,record.cedula);
  const json=JSON.stringify(record);
