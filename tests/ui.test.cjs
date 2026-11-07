@@ -54,7 +54,7 @@ click('rec-back');
 assert.match(content(),/Borradores guardados/);
 click('rec-open','plagio-trabajo');
 assert.match(content(),/<h1>Antiplagio/);
-assert.match(content(),/Cargando estudiantes|No se pudo consultar el período/);
+assert.match(content(),/Cargando estudiantes|Consulta no disponible|Actualiza Electron/);
 assert.match(content(),/Actualizar/);
 assert.match(content(),/PDF individuales/);
 assert.match(content(),/Descargar ZIP/);
