@@ -15,7 +15,7 @@ const student=(i,career='CONTABILIDAD')=>({
 });
 const row=(i,percent='0')=>({...M.createRow(student(i)),similitud:percent,
   fechaReporte:'2026-11-06',referencia:'REF-'+i,confirmado:true});
-const meta={codigo:'MEM-ITSQMET-UTET-2026-11-001',destinatario:'Autoridad de prueba',
+const meta={codigo:'01 MEM-ITSQMET-UTET-2026-11-07',destinatario:'Autoridad de prueba',
   cargoDestinatario:'Cargo de prueba',fecha:'2026-11-07',fechaCorte:'2026-11-06',herramienta:''};
 assert.equal(M.number(''),null,'vacío no equivale a cero');
 assert.equal(M.number('0'),0);
@@ -43,7 +43,11 @@ const simple=M.renderPDF(meta,[injected],'Abril 2026 a Septiembre 2026');
 assert.ok(simple.includes('institutional-document'));
 assert.ok(!simple.includes('<script>'));
 assert.ok(simple.includes('&lt;script&gt;'));
-assert.ok(simple.includes('Memorando No.'));
+assert.ok(simple.includes('No. 01 MEM-ITSQMET-UTET-2026-11-07'));
+assert.ok(!simple.includes('UEAI'));
+assert.ok(!simple.includes('2026-11-001'));
+assert.ok(M.validate(good,{...meta,codigo:'01 MEM-ITSQMET-UEAI-2026-11-07'}).some(x=>x.includes('Formato')));
+assert.ok(M.validate(good,{...meta,codigo:'01 MEM-ITSQMET-UTET-2026-11-06'}).some(x=>x.includes('fecha')));
 assert.ok(simple.includes('COORDINADOR DE TITULACIÓN'));
 assert.ok(simple.includes('REPORTE DE PORCENTAJE DE ANTIPLAGIO'));
 assert.ok(simple.includes('Google'),'fuente documentada visible');
@@ -52,7 +56,7 @@ assert.equal((simple.match(/class="inst-page ap-page/g)||[]).length,2,'un estudi
 assert.ok(simple.includes('ap-src-on'));
 assert.ok(simple.includes('ap-src-off'));
 assert.ok(!simple.includes('MAQUETA'));
-assert.ok(simple.indexOf('Memorando No.')<simple.indexOf('REPORTE DE PORCENTAJE'));
+assert.ok(simple.indexOf('No. 01 MEM-ITSQMET-UTET-2026-11-07')<simple.indexOf('REPORTE DE PORCENTAJE'));
 const rows=Array.from({length:54},(_,i)=>row(i+1,String(i%20)));
 rows[37].carreraNombre='ENFERMERÍA';
 const pdf=M.renderPDF(meta,rows,'Abril 2026 a Septiembre 2026');
