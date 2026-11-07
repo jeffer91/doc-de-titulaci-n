@@ -41,9 +41,11 @@
   function validate(rows,meta){
     const errors=[];
     if(!rows.length)errors.push('Selecciona al menos un estudiante de Firebase.');
-    if(!t(meta.codigo))errors.push('Ingresa el código real del memorando.');
-    else if(/0X|20XX|AÑO|MES|XXX|\[|\]/i.test(t(meta.codigo)))
-      errors.push('El código del memorando contiene marcadores de plantilla.');
+    if(!t(meta.codigo))errors.push('Espera la numeración provisional del memorando.');
+    else if(!/^([0-9]{2,}) MEM-ITSQMET-UTET-(\d{4}-\d{2}-\d{2})$/.test(t(meta.codigo)))
+      errors.push('Formato de memorando inválido: No. XX MEM-ITSQMET-UTET-AAAA-MM-DD.');
+    else if(!t(meta.codigo).endsWith('-'+t(meta.fecha)))
+      errors.push('La fecha del código debe coincidir con la fecha de emisión del memorando.');
     if(!t(meta.destinatario))errors.push('Indica el nombre de la autoridad destinataria.');
     if(!t(meta.cargoDestinatario))errors.push('Indica el cargo de la autoridad.');
     if(!t(meta.fecha)||day(meta.fecha)==='Sin fecha')errors.push('Indica la fecha del memorando.');
@@ -117,7 +119,7 @@
       '<div><dt>Fecha de corte</dt><dd>'+E(day(meta.fechaCorte))+'</dd></div>'+
       '<div><dt>Herramienta</dt><dd>'+E(meta.herramienta||'Según evidencia individual')+'</dd></div>'+
       '<div><dt>Rango operativo</dt><dd>0–19 % (no equivale a una aprobación académica)</dd></div>'+
-      '<div><dt>Memorando</dt><dd>'+E(meta.codigo||'Pendiente de asignación')+'</dd></div></dl>';
+      '<div><dt>Memorando</dt><dd>No. '+E(meta.codigo||'Pendiente de asignación')+'</dd></div></dl>';
   }
   function metrics(data){
     return '<div class="ap-metrics">'+[
@@ -215,7 +217,7 @@
     const subject='Remisión del reporte de antiplagio (porcentajes de similitud) de trabajos de titulación';
     return '<header class="ap-memo-header"><img src="assets/logo-itsqmet.png" alt="ITSQMET"/>'+
       '<span>UNIDAD DE TITULACIÓN Y EFICIENCIA TERMINAL</span></header>'+
-      '<h1 class="ap-memo-title">Memorando No. '+E(meta.codigo||'[CÓDIGO INSTITUCIONAL]')+'</h1>'+
+      '<h1 class="ap-memo-title">No. '+E(meta.codigo||'XX MEM-ITSQMET-UTET-AAAA-MM-DD')+'</h1>'+
       '<table class="ap-memo-fields"><tbody>'+
       '<tr><th>PARA</th><td>'+E(meta.destinatario)+'<br>'+E(meta.cargoDestinatario)+'</td></tr>'+
       '<tr><th>DE</th><td>MSc. Jefferson Edgar Villarreal Enríquez<br>Coordinador de Titulación</td></tr>'+
