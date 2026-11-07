@@ -14,7 +14,7 @@ const document = {
 const saved = new Map();
 const window = {scrollY:157,scrollTo(x,y){this.scrollY=y}};
 const context=vm.createContext({window,document,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,val)=>saved.set(key,val)},setTimeout:()=>1,clearTimeout:()=>{},confirm:()=>true,Date,Math,console});
-for(const file of ['data.js','institutional.js','records.js','records-ui.js','app.js']) vm.runInContext(fs.readFileSync(path.join(ROOT,file),'utf8'),context,{filename:file});
+for(const file of ['data.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','app.js']) vm.runInContext(fs.readFileSync(path.join(ROOT,file),'utf8'),context,{filename:file});
 const content=()=>document.getElementById('app-content').innerHTML;
 const click=(action,id)=>callbacks.get('document:click')({target:{closest:()=>({dataset:{action,id}})}});
 assert.match(content(),/Procesos: <strong>9<\/strong>/);
