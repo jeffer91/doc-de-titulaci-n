@@ -4,15 +4,12 @@
 const PROJECT = 'utet-4387a';
 const API_KEY = 'AIzaSyCaHf1C0BB0X_H3BDZ1o-UDAsPmLTjsZLA'; // Clave web pública (no es contraseña).
 const ORIGIN = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents';
-const AUTH_URL = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY;
-let session = null;
 const str = v => String(v == null ? '' : v).trim();
 const validPeriod = p => /^\d{4}-\d{2}__\d{4}-\d{2}$/.test(str(p));
 const validId = v => /^[0-9A-Za-z]{6,20}$/.test(str(v));
 
 async function request(url, options = {}) {
   const headers = {'Accept':'application/json', ...(options.body ? {'Content-Type':'application/json'} : {})};
-  if (session?.idToken && session.expiresAt > Date.now() + 60000) headers.Authorization = 'Bearer ' + session.idToken;
   const response = await fetch(url, {
     ...options, headers: {...headers, ...(options.headers || {})},
     signal: AbortSignal.timeout(25000)
@@ -28,7 +25,7 @@ async function request(url, options = {}) {
   if (!response.ok) {
     const reason = str(data.error?.message || response.statusText);
     if (response.status === 401 || response.status === 403)
-      throw new Error('Firebase rechazó la lectura (' + response.status + '). Comprueba las reglas de acceso o inicia sesión. ' + reason);
+      throw new Error('Firebase rechazó la lectura (' + response.status + '). Revisa las reglas de Firestore; la app no omite permisos. ' + reason);
     throw new Error('No se pudo consultar Firebase: ' + reason.slice(0, 220));
   }
   return data;
@@ -122,23 +119,9 @@ async function loadStudents(periodoId) {
   }
   return {periodoId,students:[...result.values()].sort((a,b)=>a.nombres.localeCompare(b.nombres,'es')),
     totalMatriculas:enrollments.length, source:'Firebase · Estudiante + matriculas',
-    readAt:new Date().toISOString(), authenticated:!!session && session.expiresAt > Date.now()};
+    readAt:new Date().toISOString(), access:'lectura-directa-sin-sesion'};
 }
-async function signIn(email, password) {
-  if (!str(email) || typeof password !== 'string' || !password)
-    throw new Error('Ingresa correo y contraseña de Firebase Authentication.');
-  const info = await request(AUTH_URL,{method:'POST',body:JSON.stringify({
-    email:str(email),password,returnSecureToken:true
-  })});
-  if (!info.idToken) throw new Error('Firebase no devolvió una sesión válida.');
-  session = {idToken:info.idToken,email:str(info.email || email),
-    expiresAt:Date.now() + Math.max(60,Number(info.expiresIn || 3600))*1000};
-  return status();
+function status(){
+  return {projectId:PROJECT,mode:'Lectura directa sin autenticación; sujeta a las reglas de Firestore'};
 }
-function status() {
-  if (session && session.expiresAt <= Date.now()) session = null;
-  return {projectId:PROJECT,authenticated:!!session,email:session?.email || '',
-    mode:'Solo lectura; sin escrituras ni sincronización de matrículas'};
-}
-function signOut() {session = null;return status();}
-module.exports = {loadStudents,signIn,signOut,status,validPeriod,field,documentValue,nameOf};
+module.exports = {loadStudents,status,validPeriod,field,documentValue,nameOf};
