@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.8.0)
+# Doc de Titulación · UTET (Electron v0.9.0)
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
@@ -24,6 +24,23 @@ npm run dist:win
 ```
 
 El instalador final se genera en `dist/` en Windows; un proyecto abierto con `npm start` sigue lanzándose a través de Electron y **no crea por sí mismo un acceso directo**. Los accesos directos anteriores pueden conservar su icono hasta reinstalar o actualizar el acceso directo. No se cambian los datos de SQLite ni el proyecto Firebase por este ajuste visual.
+
+## PRO-57 · Acta de Titulación por Artículo Académico (AA)
+
+El documento `acta-articulo` del proceso UTET-PRO-57 tiene una pantalla propia:
+**Gestión de artículo académico → Acta de Titulación por Artículo Académico → Datos**.
+
+- **Formato:** tres páginas tamaño **carta**, basadas en las actas de Complexivo suministradas: portada, constancia de nueve requisitos, y aprobaciones/conclusión institucional. Incluye el logotipo ITSQMET, control documental, número individual AA, tres espacios de firmas (MSc. Jefferson Villarreal, Ing. Martha Tomalá, Dr. Alex León T.) y pie en las tres páginas.
+- **Código individual:** `AA-AAAA-CCCC-MM-NNNN`, con las cuatro primeras cifras de la cédula en `CCCC`. Ejemplo de forma: `AA-2026-0105-05-0129`. `AT-ITSQMET-UTET-AAAA-MM` es el código **documental**, distinto del número de acta.
+- **Fecha:** último día laborable del segundo mes después del cierre del período (octubre 2025–marzo 2026 → 29/05/2026). Se utilizan calendarios nacionales 2026/2027; en otros años el alta oficial queda bloqueada hasta verificar feriados. Pueden requerirse controles adicionales de feriados locales.
+- **Contenido:** no imprime notas numéricas del artículo ni de la defensa. Muestra los nueve requisitos, la aprobación de titulación, la aprobación complexivo/proyecto aplicada al artículo y las condiciones documentales cumplidas.
+- **Control de emisión:** el botón «Verificar» consulta solo los documentos `requisitos`, `notas`, `matriculas` y `UTET_antiplagio_memorandos` del estudiante seleccionado en Firebase. Requiere 9/9 requisitos CUMPLE, 2/2 aprobaciones CUMPLE, nota de artículo **≥7/10**, nota de defensa **≥7/10**, modalidad Artículo Académico y resultado **real** de similitud **≤20,00 %** (inclusive). La app no inventa ni completa datos ausentes; la emisión vuelve a verificar en el servidor.
+- **Numeración única:** el alta se realiza por transacción en las colecciones institucionales `actas_registro`, `actas_contadores` y `actas_numeros`, con identidad `AA__<periodo>__<cedula>`. Comparte el contador mensual de las actas de otras modalidades, pero mantiene su identidad independiente. Sin permiso de escritura en Firebase, no puede emitir un número oficial.
+- **SQLite local:** utiliza las tablas `actas_articulo` y `actas_articulo_evidencia` dentro de la base `utet-antiplagio.sqlite` ya existente; migración no destructiva. La lista de estudiantes es compartida por período y se mantiene local para no volver a leerla cada vez.
+- **Descarga:** «Emitir» guarda el registro central y descarga directamente el PDF en Descargas. «PDF» reimprime un acta ya emitida sin generar número nuevo. «Recuperar» consulta **una única acta** por cédula desde Firebase, útil en otro equipo. El ZIP incluye únicamente las actas emitidas seleccionadas, nunca estudiantes pendientes.
+- **Protección:** las fichas incompletas, los resultados sin origen real y las aprobaciones pendientes bloquean el acta; no se muestran como CUMPLE automáticamente. La fecha de registro corresponde al día de registro efectivo, que puede ser posterior a la fecha académica de emisión.
+
+La conexión real a las colecciones de requisitos, notas y actas debe probarse con permisos institucionales habilitados. Las pruebas CI utilizan datos ficticios y verifican la impresión PDF con Electron.
 
 ## PRO-57 · Porcentaje de Plagio de Artículo Académico
 
