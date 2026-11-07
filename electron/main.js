@@ -6,6 +6,9 @@ const os = require('node:os');
 const Excel = require('./excel.js');
 const Firebase = require('./firebase-read.js');
 const Memo = require('./memo-numbering.js');
+const AntiplagioStore = require('./antiplagio-store.js');
+const JSZip = require('jszip');
+
 
 const ROOT = path.join(__dirname, '..');
 const RENDERER = path.join(ROOT, 'renderer');
@@ -98,6 +101,54 @@ async function savePDF(event, input) {
   }
 }
 
+
+function validateAntiplagioExport(spec){
+ if(!spec||!Array.isArray(spec.files)||!['folder','zip'].includes(spec.mode)||!spec.files.length||spec.files.length>500)throw Error('Selección de memorandos inválida (1 a 500).');
+ for(const file of spec.files){
+   if(typeof file.html!=='string'||file.html.length>MAX_HTML||!file.html.includes('class="institutional-document'))throw Error('Contenido PDF inválido.');
+   if(typeof file.name!=='string'||file.name.length>120||!/^[-_\\p{L}\\p{N} .]+\\.pdf$/u.test(file.name))throw Error('Nombre de PDF inválido.');
+ }
+}
+async function exportAntiplagio(event,spec){
+ verifySender(event);validateAntiplagioExport(spec);
+ const owner=BrowserWindow.fromWebContents(event.sender);
+ const isZip=spec.mode==='zip';
+ let dir=null,target=null;
+ if(isZip){
+   const result=await dialog.showSaveDialog(owner,{title:'Guardar memorandos ZIP',defaultPath:'Memorandos_UTET.zip',filters:[{name:'ZIP',extensions:['zip']}]});
+   if(result.canceled||!result.filePath)return {canceled:true};
+   target=result.filePath;
+ }else{
+   const result=await dialog.showOpenDialog(owner,{title:'Seleccionar carpeta para memorandos',properties:['openDirectory','createDirectory']});
+   if(result.canceled||!result.filePaths?.[0])return {canceled:true};
+   dir=result.filePaths[0];
+ }
+ const printer=new BrowserWindow({show:false,webPreferences:{sandbox:true,nodeIntegration:false,contextIsolation:true,javascript:false,webSecurity:true,images:true}});
+ let tempDir=null;
+ try{
+   tempDir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-ant-'));
+   const zip=isZip?new JSZip():null;
+   const names=new Set();
+   let index=0;
+   for(const file of spec.files){
+     const name=file.name.replace(/[\\/]/g,'_');
+     if(names.has(name))throw Error('Nombre de PDF duplicado: '+name);
+     names.add(name);
+     const inputFile=path.join(tempDir,'p'+index+'.html');index++;
+     await fs.writeFile(inputFile,await createPrintHTML(file.html),{mode:0o600});
+     await printer.loadFile(inputFile);
+     const pdf=await printer.webContents.printToPDF({printBackground:true,preferCSSPageSize:true,pageSize:'A4',margins:{marginType:'none'},displayHeaderFooter:false});
+     if(zip)zip.file(name,pdf);
+     else await fs.writeFile(path.join(dir,name),pdf,{flag:'wx'});
+   }
+   if(zip)await fs.writeFile(target,await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}));
+   return {canceled:false,count:spec.files.length,location:target||dir};
+ }finally{
+   if(!printer.isDestroyed())printer.destroy();
+   if(tempDir)await fs.rm(tempDir,{recursive:true,force:true});
+ }
+}
+
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);
   ipcMain.handle('utet:save-pdf',savePDF);
@@ -105,6 +156,9 @@ app.whenReady().then(()=>{
     verifySender(event);
     return Memo.next(app.getPath('userData'),date);
   });
+  ipcMain.handle('utet:antiplagio-list',(event,periodoId)=>{verifySender(event);return AntiplagioStore.list(periodoId);});
+  ipcMain.handle('utet:antiplagio-save',(event,record)=>{verifySender(event);return AntiplagioStore.save(record);});
+  ipcMain.handle('utet:antiplagio-export',exportAntiplagio);
   ipcMain.handle('utet:firebase-students',(event,periodoId)=>{verifySender(event);return Firebase.loadStudents(periodoId);});
   ipcMain.handle('utet:firebase-status',(event)=>{verifySender(event);return Firebase.status();});
   ipcMain.handle('utet:excel-template',(event,spec)=>{verifySender(event);return Excel.downloadTemplate(event,spec);});
