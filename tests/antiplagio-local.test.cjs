@@ -39,6 +39,29 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
   assert.equal(snap.records.length,1);
   assert.equal(snap.records[0].folio,memo(PERIOD).folio);
   assert.equal(snap.records[0].syncStatus,'sincronizado');
+  // El estudiante puede tener memorandos distintos, sin que uno pise al otro.
+  const articulo={...memo(PERIOD),tipoDocumento:'articulo',similitud:'8.75',
+    folio:'02 MEM-ITSQMET-UTET-2026-04-15',referencia:'UTET-ANT-2026-04-0002'};
+  const newArticle=await Local.snapshot(dir,PERIOD,'articulo');
+  assert.equal(newArticle.hasCache,false,'La primera carga de artículos debe identificar si aún no fueron sincronizados');
+  assert.equal(newArticle.hasStudentCache,true,'No hay que recargar las fichas académicas');
+  await Local.replaceFromFirebase(dir,PERIOD,null,[articulo],'2026-11-07T11:01:00.000Z','articulo');
+  let artSnap=await Local.snapshot(dir,PERIOD,'articulo');
+  assert.equal(artSnap.hasCache,true);
+  assert.equal(artSnap.students.length,1);
+  assert.equal(artSnap.records.length,1);
+  assert.equal(artSnap.records[0].folio,articulo.folio);
+  assert.equal(artSnap.records[0].tipoDocumento,'articulo');
+  assert.equal((await Local.snapshot(dir,PERIOD,'trabajo')).records[0].folio,memo(PERIOD).folio);
+  await Local.saveDraft(dir,{...artSnap.records[0],similitud:'9.25'});
+  await Local.replaceFromFirebase(dir,PERIOD,null,[articulo],undefined,'articulo');
+  artSnap=await Local.snapshot(dir,PERIOD,'articulo');
+  assert.equal(artSnap.records[0].similitud,'9.25','No sobrescribir cambios locales pendientes de un artículo');
+  assert.equal(artSnap.records[0].syncStatus,'pendiente');
+  assert.equal((await Local.snapshot(dir,PERIOD,'trabajo')).records[0].similitud,memo(PERIOD).similitud);
+  await Local.markSynced(dir,{...artSnap.records[0],similitud:'9.25'});
+  assert.equal((await Local.snapshot(dir,PERIOD,'articulo')).records[0].syncStatus,'sincronizado');
+
   const filename=path.join(dir,'UTET',Local.NAME);
   assert.equal((await fs.readFile(filename)).subarray(0,15).toString('utf8'),'SQLite format 3');
   await Local.saveDraft(dir,{...snap.records[0],similitud:'13.50'});
@@ -59,6 +82,7 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
   // La eliminación remota solo borra registros locales SIN cambios.
   await Local.replaceFromFirebase(dir,PERIOD,[person(PERIOD)],[],undefined);
   assert.equal((await Local.snapshot(dir,PERIOD)).records.length,0);
+  assert.equal((await Local.snapshot(dir,PERIOD,'articulo')).records.length,1,'Actualizar trabajo no elimina artículo');
   await Local.saveDraft(dir,memo(PERIOD));
   await Local.replaceFromFirebase(dir,PERIOD,[person(PERIOD)],null,undefined);
   assert.equal((await Local.snapshot(dir,PERIOD)).records.length,1,'No borrar memorandos cuando no se pudieron leer desde Firebase');
@@ -71,6 +95,7 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
   const reloaded=await Reopened.snapshot(dir,PERIOD);
   assert.equal(reloaded.hasCache,true);
   assert.equal(reloaded.records.length,1);
+  assert.equal((await Reopened.snapshot(dir,PERIOD,'articulo')).records[0].folio,articulo.folio,'El artículo también sobrevive el reinicio');
   assert.equal(reloaded.syncedAt!==null,true);
   console.log('OK SQLite: primera carga, búsqueda local, reemplazo atómico, borradores y persistencia entre sesiones.');
  }finally{await fs.rm(dir,{recursive:true,force:true});}
