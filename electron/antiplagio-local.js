@@ -29,6 +29,7 @@ const validPeriod=x=>/^\d{4}-(0[1-9]|1[0-2])__\d{4}-(0[1-9]|1[0-2])$/.test(str(x
 const validCedula=x=>/^[0-9A-Za-z]{6,20}$/.test(str(x));
 const key=(p,c)=>{if(!validPeriod(p)||!validCedula(c))throw Error('Período o cédula inválidos.');return [p,str(c)];};
 const iso=()=>new Date().toISOString();
+const tableFor=tipo=>{if(tipo!=='trabajo'&&tipo!=='articulo')throw Error('Tipo documental inválido.');return tipo==='articulo'?'memorandos_articulo':'memorandos';};
 const prepared=(db,sql,values=[])=>{const st=db.prepare(sql);try{st.bind(values);const rows=[];while(st.step())rows.push(st.getAsObject());return rows;}finally{st.free();}};
 const one=(db,sql,values=[])=>prepared(db,sql,values)[0]||null;
 function schema(db){
@@ -39,7 +40,10 @@ function schema(db){
  db.run('CREATE INDEX IF NOT EXISTS idx_estudiantes_periodo_nombre ON estudiantes(periodo_id,nombres)');
  db.run("CREATE TABLE IF NOT EXISTS memorandos(periodo_id TEXT NOT NULL, cedula TEXT NOT NULL, documento TEXT NOT NULL, estado TEXT NOT NULL CHECK(estado IN ('sincronizado','pendiente')), actualizado_en TEXT NOT NULL, PRIMARY KEY(periodo_id,cedula))");
  db.run('CREATE INDEX IF NOT EXISTS idx_memorandos_periodo ON memorandos(periodo_id)');
- db.run('PRAGMA user_version=1');
+ db.run("CREATE TABLE IF NOT EXISTS memorandos_articulo(periodo_id TEXT NOT NULL, cedula TEXT NOT NULL, documento TEXT NOT NULL, estado TEXT NOT NULL CHECK(estado IN ('sincronizado','pendiente')), actualizado_en TEXT NOT NULL, PRIMARY KEY(periodo_id,cedula))");
+ db.run('CREATE INDEX IF NOT EXISTS idx_memorandos_articulo_periodo ON memorandos_articulo(periodo_id)');
+ db.run('CREATE TABLE IF NOT EXISTS articulos_sync(periodo_id TEXT PRIMARY KEY, sincronizado_en TEXT NOT NULL)');
+ db.run('PRAGMA user_version=2');
 }
 async function open(baseDir){
  if(typeof baseDir!=='string'||!baseDir.trim())throw Error('Directorio local inválido.');
@@ -84,15 +88,17 @@ async function write(baseDir,action){
   }
  });
 }
-async function snapshot(baseDir,periodoId){
+async function snapshot(baseDir,periodoId,modo='trabajo'){
+ const table=tableFor(modo);
  if(!validPeriod(periodoId))throw Error('Período inválido.');
  // Serializa también las lecturas: ninguna ve una transacción parcialmente aplicada.
  return serialized(async()=>{
  const ctx=await open(baseDir),db=ctx.db;
  const meta=one(db,'SELECT sincronizado_en AS sincronizadoEn,estudiantes,memorandos FROM periodos_sync WHERE periodo_id=?',[periodoId]);
+ const articleMeta=modo==='articulo'?one(db,'SELECT sincronizado_en AS sincronizadoEn FROM articulos_sync WHERE periodo_id=?',[periodoId]):null;
  const students=prepared(db,'SELECT estudiante_id AS estudianteId,periodo_id AS periodoId,cedula,nombres,carrera_id AS carreraId,carrera_nombre AS carreraNombre,modalidad,sede,jornada,retirado FROM estudiantes WHERE periodo_id=? ORDER BY nombres COLLATE NOCASE',[periodoId]).map(s=>({...s,retirado:!!s.retirado}));
- const records=prepared(db,'SELECT cedula,documento,estado FROM memorandos WHERE periodo_id=?',[periodoId]).map(x=>({...JSON.parse(x.documento),cedula:x.cedula,syncStatus:x.estado}));
- return {periodoId,hasCache:!!meta,syncedAt:meta?.sincronizadoEn||null,students,records,source:'SQLite local'};
+ const records=prepared(db,`SELECT cedula,documento,estado FROM ${table} WHERE periodo_id=?`,[periodoId]).map(x=>({...JSON.parse(x.documento),tipoDocumento:modo,cedula:x.cedula,syncStatus:x.estado}));
+ return {periodoId,tipoDocumento:modo,hasCache:!!meta&&(modo==='trabajo'||!!articleMeta),hasStudentCache:!!meta,syncedAt:(articleMeta||meta)?.sincronizadoEn||null,students,records,source:'SQLite local'};
  });
 }
 function checkStudents(periodoId,students){
@@ -107,58 +113,62 @@ function checkStudents(periodoId,students){
    modalidad:t('modalidad'),sede:t('sede'),jornada:t('jornada'),retirado:s.retirado===true};
  });
 }
-async function replaceFromFirebase(baseDir,periodoId,students,records,time=iso()){
+async function replaceFromFirebase(baseDir,periodoId,students,records,time=iso(),modo='trabajo'){
+ const table=tableFor(modo);
  if(!validPeriod(periodoId)||(records!==null&&(!Array.isArray(records)||records.length>MAX_ROWS)))throw Error('Sincronización inválida.');
- const valid=checkStudents(periodoId,students);
+ const valid=students===null?null:checkStudents(periodoId,students);
  const remote=[];
  for(const r of records||[]){
-  if(r.periodoId!==periodoId||!validCedula(r.cedula))throw Error('Memorando remoto fuera del período.');
+  if(r.periodoId!==periodoId||!validCedula(r.cedula)||(r.tipoDocumento||'trabajo')!==modo)throw Error('Memorando remoto fuera del período o tipo documental.');
   remote.push({...r,syncStatus:undefined});
  }
  const result=await write(baseDir,db=>{
-  db.run('DELETE FROM estudiantes WHERE periodo_id=?',[periodoId]);
-  const insert=db.prepare('INSERT INTO estudiantes(periodo_id,cedula,estudiante_id,nombres,carrera_id,carrera_nombre,modalidad,sede,jornada,retirado) VALUES(?,?,?,?,?,?,?,?,?,?)');
-  try{for(const s of valid)insert.run([periodoId,s.cedula,s.estudianteId,s.nombres,s.carreraId,s.carreraNombre,s.modalidad,s.sede,s.jornada,s.retirado?1:0]);}
-  finally{insert.free();}
+  if(valid!==null){
+   db.run('DELETE FROM estudiantes WHERE periodo_id=?',[periodoId]);
+   const insert=db.prepare('INSERT INTO estudiantes(periodo_id,cedula,estudiante_id,nombres,carrera_id,carrera_nombre,modalidad,sede,jornada,retirado) VALUES(?,?,?,?,?,?,?,?,?,?)');
+   try{for(const s of valid)insert.run([periodoId,s.cedula,s.estudianteId,s.nombres,s.carreraId,s.carreraNombre,s.modalidad,s.sede,s.jornada,s.retirado?1:0]);}
+   finally{insert.free();}
+  }
   // Sincronización no sobrescribe borradores locales no publicados.
   if(records!==null){
-  const upsert=db.prepare("INSERT INTO memorandos(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'sincronizado',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento, estado=excluded.estado, actualizado_en=excluded.actualizado_en WHERE memorandos.estado='sincronizado'");
+  const upsert=db.prepare(`INSERT INTO ${table}(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'sincronizado',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento, estado=excluded.estado, actualizado_en=excluded.actualizado_en WHERE ${table}.estado='sincronizado'`);
   const stamp=iso();
   try{for(const r of remote)upsert.run([periodoId,r.cedula,JSON.stringify(r),stamp]);}finally{upsert.free();}
   const remoteIds=new Set(remote.map(r=>r.cedula));
   // Limpiar registros remotos eliminados solo si no hay edición pendiente.
-  const old=prepared(db,"SELECT cedula FROM memorandos WHERE periodo_id=? AND estado='sincronizado'",[periodoId]);
-  const remove=db.prepare("DELETE FROM memorandos WHERE periodo_id=? AND cedula=? AND estado='sincronizado'");
+  const old=prepared(db,`SELECT cedula FROM ${table} WHERE periodo_id=? AND estado='sincronizado'`,[periodoId]);
+  const remove=db.prepare(`DELETE FROM ${table} WHERE periodo_id=? AND cedula=? AND estado='sincronizado'`);
   try{for(const r of old)if(!remoteIds.has(r.cedula))remove.run([periodoId,r.cedula]);}finally{remove.free();}
+   if(modo==='articulo')db.run('INSERT INTO articulos_sync(periodo_id,sincronizado_en) VALUES(?,?) ON CONFLICT(periodo_id) DO UPDATE SET sincronizado_en=excluded.sincronizado_en',[periodoId,time]);
   }
-  db.run('INSERT INTO periodos_sync(periodo_id,sincronizado_en,estudiantes,memorandos) VALUES(?,?,?,?) ON CONFLICT(periodo_id) DO UPDATE SET sincronizado_en=excluded.sincronizado_en,estudiantes=excluded.estudiantes,memorandos=excluded.memorandos',[periodoId,time,valid.length,records===null?-1:remote.length]);
-  return {students:valid.length,records:records===null?null:remote.length};
+  if(valid!==null)db.run('INSERT INTO periodos_sync(periodo_id,sincronizado_en,estudiantes,memorandos) VALUES(?,?,?,?) ON CONFLICT(periodo_id) DO UPDATE SET sincronizado_en=excluded.sincronizado_en,estudiantes=excluded.estudiantes,memorandos=excluded.memorandos',[periodoId,time,valid.length,modo==='trabajo'?(records===null?-1:remote.length):0]);
+  return {students:valid===null?null:valid.length,records:records===null?null:remote.length};
  });
  return result;
 }
 async function saveDraft(baseDir,record){
  if(!record||typeof record!=='object')throw Error('Registro local inválido.');
- const [p,c]=key(record.periodoId,record.cedula);
+ const [p,c]=key(record.periodoId,record.cedula),table=tableFor(record.tipoDocumento||'trabajo');
  if(record.estudianteId!==p+'__'+c)throw Error('Identidad incompatible con período.');
  const copy=JSON.parse(JSON.stringify(record));
  delete copy.syncStatus;
  if(JSON.stringify(copy).length>20000)throw Error('El registro excede el tamaño permitido.');
  await write(baseDir,db=>{
-  const prev=one(db,'SELECT documento FROM memorandos WHERE periodo_id=? AND cedula=?',[p,c]);
+  const prev=one(db,`SELECT documento FROM ${table} WHERE periodo_id=? AND cedula=?`,[p,c]);
   // No permitir cambiar inadvertidamente folio/fecha de un documento oficial.
   if(prev){
    const existing=JSON.parse(prev.documento);
    if(existing.folio){copy.folio=existing.folio;copy.referencia=existing.referencia;copy.fecha=existing.fecha;}
   }
-  db.run("INSERT INTO memorandos(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'pendiente',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento,estado='pendiente',actualizado_en=excluded.actualizado_en",[p,c,JSON.stringify(copy),iso()]);
+  db.run(`INSERT INTO ${table}(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'pendiente',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento,estado='pendiente',actualizado_en=excluded.actualizado_en`,[p,c,JSON.stringify(copy),iso()]);
  });
  return {saved:true,pending:true};
 }
 async function markSynced(baseDir,record){
- const [p,c]=key(record.periodoId,record.cedula);
+ const [p,c]=key(record.periodoId,record.cedula),table=tableFor(record.tipoDocumento||'trabajo');
  const copy=JSON.parse(JSON.stringify(record));copy.syncStatus=undefined;
  await write(baseDir,db=>{
-  db.run("INSERT INTO memorandos(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'sincronizado',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento,estado='sincronizado',actualizado_en=excluded.actualizado_en",[p,c,JSON.stringify(copy),iso()]);
+  db.run(`INSERT INTO ${table}(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'sincronizado',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento,estado='sincronizado',actualizado_en=excluded.actualizado_en`,[p,c,JSON.stringify(copy),iso()]);
  });
 }
-module.exports={open,snapshot,replaceFromFirebase,saveDraft,markSynced,validPeriod,checkStudents,NAME};
+module.exports={open,snapshot,replaceFromFirebase,saveDraft,markSynced,validPeriod,checkStudents,tableFor,NAME};
