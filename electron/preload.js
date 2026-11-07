@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('utetDesktop', Object.freeze({
   refreshActaArticulo: p => ipcRenderer.invoke('utet:acta-articulo-refresh',p),
   verifyActaArticulo: (p,c) => ipcRenderer.invoke('utet:acta-articulo-verify',p,c),
   issueActaArticulo: (p,c) => ipcRenderer.invoke('utet:acta-articulo-issue',p,c),
+  recoverActaArticulo: (p,c) => ipcRenderer.invoke('utet:acta-articulo-recover',p,c),
   exportActaArticulo: spec => ipcRenderer.invoke('utet:acta-articulo-export',spec),
   platform: process.platform
 }));
