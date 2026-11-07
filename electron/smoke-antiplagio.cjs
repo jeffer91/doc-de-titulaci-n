@@ -3,6 +3,7 @@
 const {app,BrowserWindow}=require('electron');
 const fs=require('node:fs');
 const path=require('node:path');
+const os=require('node:os');
 const vm=require('node:vm');
 const assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
@@ -45,8 +46,11 @@ async function check(count,expected){
   const win=new BrowserWindow({show:false,webPreferences:{
     sandbox:true,nodeIntegration:false,contextIsolation:true,javascript:false,webSecurity:true
   }});
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'utet-pdf-test-'));
   try{
-    await win.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(src));
+    const file=path.join(tmp,'impresion.html');
+    fs.writeFileSync(file,src,{mode:0o600});
+    await win.loadFile(file);
     const pdf=Buffer.from(await win.webContents.printToPDF({
       printBackground:true,preferCSSPageSize:true,pageSize:'A4',
       margins:{marginType:'none'},displayHeaderFooter:false
@@ -56,7 +60,7 @@ async function check(count,expected){
     const detected=(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)||[]).length;
     assert.equal(detected,pages,'El PDF no debe agregar páginas ni perderlas: '+count+' estudiantes');
     console.log('OK Electron PDF: '+count+' estudiantes, '+detected+' páginas, '+pdf.length+' bytes.');
-  }finally{win.destroy();}
+  }finally{win.destroy();fs.rmSync(tmp,{recursive:true,force:true});}
 }
-app.whenReady().then(async()=>{await check(1,2);await check(54);app.quit();})
-  .catch(err=>{console.error(err);process.exitCode=1;app.quit();});
+app.whenReady().then(async()=>{await check(1,2);await check(54);app.exit(0);})
+  .catch(err=>{console.error(err);app.exit(1);});
