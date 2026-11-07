@@ -38,6 +38,15 @@ function normalizedStudent(student,p,cedula){
 function cleanCareer(name){
  return String(name||'').replace(/\bonline\b/gi,'').replace(/\s+[-–|(]\s*$/g,'').replace(/\s+/g,' ').trim();
 }
+function studiesMode(student){
+ const raw=String(student?.modalidad||'').trim();
+ if(/^(ARTICULO_ACADEMICO|EXAMEN_COMPLEXIVO|TRABAJO_TITULACION)$/i.test(raw))
+  return /online/i.test(student.carreraNombre||'')?'En línea':'No registrada';
+ if(/\bonline\b|en l[ií]nea/i.test(raw))return 'En línea';
+ if(/h[ií]brid/i.test(raw))return 'Híbrida';
+ return raw||(/online/i.test(student.carreraNombre||'')?'En línea':'No registrada');
+}
+
 async function readEvidence(periodoId,cedula,baseDir){
  identity(periodoId,cedula);
  const student=(await Local.snapshot(baseDir,periodoId,'trabajo')).students.find(x=>x.cedula===cedula);
@@ -129,7 +138,7 @@ async function issue(periodoId,cedula,baseDir){
     modalidad:'ARTICULO_ACADEMICO',periodoId,cedula,numeroActa,
     codigoDocumento:p.documentCode,fechaEmision:p.date,fechaRegistro:regDate,
     nombre:student.nombres,carrera:cleanCareer(student.carreraNombre),
-    modalidadEstudios:student.modalidad||(/online/i.test(student.carreraNombre)?'En línea':'No registrada'),
+    modalidadEstudios:studiesMode(student),
     requisitos:evidence.requirements,aprobaciones:evidence.approvals,
     comprobaciones:evidence.checks,verificadoEn:evidence.verifiedAt,
     version:'1.0',createdAt:now
@@ -147,4 +156,4 @@ async function get(baseDir,periodoId,cedula){
  identity(periodoId,cedula);
  return Local.getActa(baseDir,periodoId,cedula);
 }
-module.exports={openPeriod,refreshStudents,readEvidence,issue,recover,get,numberCode,identity,cleanCareer,REGISTRY,COUNTERS,NUMBERS};
+module.exports={openPeriod,refreshStudents,readEvidence,issue,recover,get,numberCode,identity,cleanCareer,studiesMode,REGISTRY,COUNTERS,NUMBERS};
