@@ -153,4 +153,4 @@ function status(){
     mode:'Firestore Lite · lectura directa bajo reglas desplegadas; sin autenticación ni escrituras'};
 }
 const reader=createReader();
-module.exports={loadStudents:reader.loadStudents,status,createReader,validPeriod,validId,nameOf,first,explain};
+module.exports={loadStudents:reader.loadStudents,status,createReader,validPeriod,validId,nameOf,first,explain,FIREBASE_CONFIG};
