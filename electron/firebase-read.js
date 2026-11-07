@@ -127,6 +127,9 @@ function createReader(provider=fromSDK){
         carreraId:first(row,['codigoCarrera','carreraId','codigoCarreraActual']),
         carreraNombre:first(row,['nombreCarrera','carreraNombre','carrera'])
           || first(person,['nombreCarreraActual','nombreCarrera']),
+        modalidad:first(row,['modalidadEstudios','modalidad','tipoModalidad','modalidadEstudio'])||first(person,['modalidadEstudios','modalidad']),
+        sede:first(row,['sede','nombreSede','campus'])||first(person,['sede','nombreSede']),
+        jornada:first(row,['jornada','nombreJornada','horario'])||first(person,['jornada']),
         retirado:row.retirado===true||/retirad/i.test(str(row.estadoMatricula))
       };
       // Si existe más de una matrícula para una cédula en el mismo período,
