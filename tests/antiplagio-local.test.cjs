@@ -15,6 +15,17 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
  folio:'01 MEM-ITSQMET-UTET-2026-04-15',referencia:'UTET-ANT-2026-04-0001',
  fuentes:{google:'detected',institucional:'not-detected'},versionPlantilla:'2'});
 (async()=>{
+ // Un paquete sql.js ausente no debe causar un error durante el arranque de Electron.
+ const code=require('node:fs').readFileSync(require.resolve('../electron/antiplagio-local.js'),'utf8');
+ const moduleMock={exports:{}},vm=require('node:vm');
+ let imports=0;
+ vm.runInNewContext(code,{module:moduleMock,require:id=>{
+  if(id==='sql.js'){imports++;const error=new Error("Cannot find module 'sql.js'");error.code='MODULE_NOT_FOUND';throw error;}
+  return require(id);
+ },process,Buffer,Date,Promise,console},{filename:'antiplagio-local.js'});
+ assert.equal(imports,0,'SQLite solo debe cargarse al usar Antiplagio, nunca al abrir la app');
+ await assert.rejects(()=>moduleMock.exports.snapshot(os.tmpdir(),PERIOD),/Falta instalar.*sql\.js.*npm install/);
+ assert.equal(imports,1);
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-local-first-'));
  try{
   const empty=await Local.snapshot(dir,PERIOD);
