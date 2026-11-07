@@ -190,6 +190,8 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
     else if(action==='ap-remove'){session.selected.delete(id);session.preview=false;render();}
     else if(action==='ap-clear'){if(!session.selected.size||confirm('¿Vaciar toda la selección?')){session.selected.clear();session.preview=false;render();}}
     else if(action==='ap-select-visible'){
+      session.query=$('ap-query')?.value.trim()||'';
+      session.career=$('ap-career')?.value||'';
       const visible=students();
       if(visible.length>80&&!confirm('¿Incluir los '+visible.length+' estudiantes filtrados?'))return true;
       visible.forEach(s=>{if(!session.selected.has(s.cedula))session.selected.set(s.cedula,M.createRow(s));});
