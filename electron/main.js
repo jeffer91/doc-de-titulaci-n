@@ -269,6 +269,7 @@ else {
   ipcMain.handle('utet:acta-articulo-refresh',(event,p)=>{verifySender(event);return ActaArticulo.refreshStudents(p,localDir(),Firebase.loadStudents);});
   ipcMain.handle('utet:acta-articulo-verify',(event,p,c)=>{verifySender(event);return ActaArticulo.readEvidence(p,c,localDir());});
   ipcMain.handle('utet:acta-articulo-issue',(event,p,c)=>{verifySender(event);return ActaArticulo.issue(p,c,localDir());});
+  ipcMain.handle('utet:acta-articulo-recover',(event,p,c)=>{verifySender(event);return ActaArticulo.recover(p,c,localDir());});
   ipcMain.handle('utet:acta-articulo-export',exportArticleActs);
   ipcMain.handle('utet:antiplagio-open',(event,periodoId,modo)=>{verifySender(event);return openAntiplagioPeriod(periodoId,modo);});
   ipcMain.handle('utet:antiplagio-refresh',(event,periodoId,modo)=>{verifySender(event);return refreshAntiplagioPeriod(periodoId,modo);});
