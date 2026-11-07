@@ -19,4 +19,6 @@ jobs:
       - name: Probar registro, portadas y navegación
         run: npm test
       - name: Probar impresión real del memorando PDF con Electron
-        run: xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs
+        run: |
+          xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --one
+          xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --many
