@@ -49,7 +49,7 @@ async function createPrintHTML(documentMarkup) {
 async function savePDF(event, input) {
   verifySender(event);
   if (!input || typeof input !== 'object' || typeof input.html !== 'string' ||
-      !input.html.includes('class="institutional-document"') ||
+      !/class="institutional-document(?:\\s|")/.test(input.html) ||
       input.html.length > MAX_HTML) throw new Error('Vista previa inválida o demasiado extensa.');
   const base = String(input.suggestedName || 'MAQUETA-UTET')
     .replace(/[^\p{L}\p{N}_ .-]/gu,'_').slice(0,90);
