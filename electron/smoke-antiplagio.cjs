@@ -42,6 +42,7 @@ function documentFor(count){
 }
 async function check(count,expected){
   const {src,pages}=documentFor(count);
+  console.log('PDF smoke: '+count+' estudiantes; '+pages+' páginas previstas; HTML '+Buffer.byteLength(src)+' bytes.');
   if(expected)assert.equal(pages,expected);
   const win=new BrowserWindow({show:false,webPreferences:{
     sandbox:true,nodeIntegration:false,contextIsolation:true,javascript:false,webSecurity:true
@@ -62,5 +63,6 @@ async function check(count,expected){
     console.log('OK Electron PDF: '+count+' estudiantes, '+detected+' páginas, '+pdf.length+' bytes.');
   }finally{win.destroy();fs.rmSync(tmp,{recursive:true,force:true});}
 }
-app.whenReady().then(async()=>{await check(1,2);await check(54);app.exit(0);})
-  .catch(err=>{console.error(err);app.exit(1);});
+const counts=process.argv.includes('--many')?[54]:[1];
+app.whenReady().then(async()=>{for(const count of counts)await check(count,count===1?2:null);process.exit(0);})
+  .catch(err=>{console.error(err);process.exit(1);});
