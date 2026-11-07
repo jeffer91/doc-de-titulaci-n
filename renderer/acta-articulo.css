@@ -40,3 +40,17 @@
 .aa-final{margin-top:8mm;background:#e4f4ec;border-left:3mm solid #218259;padding:3.2mm 3mm;color:#28764e;font-weight:700}
 .aa-end-note{font-size:9pt;line-height:1.4;margin:3mm 2mm}
 .aa-document .aa-content-page .aa-section:last-of-type{margin-bottom:3mm}
+
+/* Hoja 2: evitar superposición del bloque de modalidad con el pie documental.
+   Mantiene visibles los nueve requisitos y ambas modalidades. */
+.aa-document .aa-page:nth-child(2) .aa-head{margin-bottom:6.5mm}
+.aa-document .aa-page:nth-child(2) .aa-constancia{
+  gap:1.2mm;padding:2mm 3mm;margin-bottom:2.5mm
+}
+.aa-document .aa-page:nth-child(2) .aa-identity{margin-bottom:2.5mm}
+.aa-document .aa-page:nth-child(2) .aa-identity th,
+.aa-document .aa-page:nth-child(2) .aa-identity td{padding:1.5mm 2.6mm}
+.aa-document .aa-page:nth-child(2) .aa-section{margin-bottom:2.4mm}
+.aa-document .aa-page:nth-child(2) .aa-section h2{padding:1.6mm 2.5mm;margin-bottom:1mm}
+.aa-document .aa-page:nth-child(2) .aa-section p{margin-bottom:1.5mm;line-height:1.28}
+.aa-document .aa-page:nth-child(2) .aa-states td{padding:1.35mm 2.7mm}
