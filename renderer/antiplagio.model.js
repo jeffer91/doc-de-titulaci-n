@@ -20,7 +20,13 @@
     return Number.isFinite(n)&&n>=0&&n<=100?n:null;
   };
   const pformat=x=>number(x)===null?'Sin registro':number(x).toLocaleString('es-EC',{maximumFractionDigits:2})+' %';
-  const day=x=>/^\d{4}-\d{2}-\d{2}$/.test(t(x))?t(x).split('-').reverse().join('/'):'Sin fecha';
+  const isDate=x=>{
+    const s=t(x);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
+    const [y,m,d]=s.split('-').map(Number),dt=new Date(Date.UTC(y,m-1,d));
+    return dt.getUTCFullYear()===y&&dt.getUTCMonth()===m-1&&dt.getUTCDate()===d;
+  };
+  const day=x=>isDate(x)?t(x).split('-').reverse().join('/'):'Sin fecha';
   function createRow(student){
     return {estudianteId:t(student.estudianteId),cedula:t(student.cedula),
       nombres:t(student.nombres),carreraId:t(student.carreraId),
@@ -36,6 +42,8 @@
     const errors=[];
     if(!rows.length)errors.push('Selecciona al menos un estudiante de Firebase.');
     if(!t(meta.codigo))errors.push('Ingresa el código real del memorando.');
+    else if(/0X|20XX|AÑO|MES|XXX|\[|\]/i.test(t(meta.codigo)))
+      errors.push('El código del memorando contiene marcadores de plantilla.');
     if(!t(meta.destinatario))errors.push('Indica el nombre de la autoridad destinataria.');
     if(!t(meta.cargoDestinatario))errors.push('Indica el cargo de la autoridad.');
     if(!t(meta.fecha)||day(meta.fecha)==='Sin fecha')errors.push('Indica la fecha del memorando.');
@@ -210,17 +218,31 @@
       let intro=index===0?'<h2>RESUMEN DEL LOTE GENERADO</h2>'+metrics(data)+'<h2>DETALLE DE RESULTADOS POR CARRERA</h2>':'';
       pages.push(page(reportPage(intro+html,meta,periodLabel,index===0),'ap-report-page'));
     });
-    pages.push(page(reportPage(graphBands(data)+graphConditions(data)+
-      '<p class="ap-caption">La distribución utiliza únicamente porcentajes informados. 0 % real no se interpreta como dato ausente.</p>',meta,periodLabel,false),'ap-chart-page'));
-    const careers=data.careers;
-    for(let i=0;i<careers.length;i+=9){
-      pages.push(page(reportPage(graphCareers(careers.slice(i,i+9)),meta,periodLabel,false),'ap-chart-page'));
+    const compact=rows.length===1 && data.careers.length===1;
+    if(compact){
+      // Caso de aceptación: 1 estudiante = memorando y reporte en exactamente 2 páginas.
+      pages[1].body += graphBands(data)+graphSources(data);
+    }else{
+      pages.push(page(reportPage(graphBands(data)+graphConditions(data)+
+        '<p class="ap-caption">La distribución utiliza únicamente porcentajes registrados. Un 0 % real no es un dato ausente.</p>',meta,periodLabel,false),'ap-chart-page'));
+      const careers=data.careers;
+      for(let i=0;i<careers.length;i+=9){
+        pages.push(page(reportPage(graphCareers(careers.slice(i,i+9)),meta,periodLabel,false),'ap-chart-page'));
+      }
+      const indexed=rows.filter(r=>spans(r.fuentes));
+      if(indexed.length){
+        for(let i=0;i<indexed.length;i+=16){
+          const group=indexed.slice(i,i+16);
+          pages.push(page(reportPage((i===0?graphSources(data):'')+
+            '<h2>Indicadores de fuentes por estudiante'+(i?' (continuación)':'')+'</h2>'+
+            '<p class="ap-caption">Activo: fuente detectada en evidencia. Gris: no detectada según evidencia. Sin información: no se presume ausente.</p>'+
+            '<div class="ap-source-index">'+group.map(r=>'<div><strong>'+E(r.nombres)+'</strong><span>'+spans(r.fuentes)+'</span></div>').join('')+
+            '</div>',meta,periodLabel,false),'ap-chart-page'));
+        }
+      }else{
+        pages.push(page(reportPage(graphSources(data),meta,periodLabel,false),'ap-chart-page'));
+      }
     }
-    pages.push(page(reportPage(graphSources(data)+
-      '<h2>Indicadores de fuentes por estudiante</h2>'+
-      '<p class="ap-caption">Solo se muestra una fuente como detectada cuando fue señalada expresamente en la evidencia registrada.</p>'+
-      '<div class="ap-source-index">'+rows.filter(r=>spans(r.fuentes)).slice(0,16).map(r=>'<div><strong>'+E(r.nombres)+'</strong><span>'+spans(r.fuentes)+'</span></div>').join('')+
-      (rows.filter(r=>spans(r.fuentes)).length>16?'<p>Los indicadores detallados restantes se consultan en las evidencias individuales.</p>':'')+'</div>',meta,periodLabel,false),'ap-chart-page'));
     const html=pages.map((p,i)=>'<section class="inst-page ap-page '+p.css+'">'+p.body+
       '<footer class="ap-footer"><span>ITSQMET · UTET · Reporte de similitud</span>'+
       '<span>Página '+(i+1)+' de '+pages.length+'</span></footer></section>').join('');
