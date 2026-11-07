@@ -139,7 +139,7 @@ async function exportAntiplagio(event,spec){
      await printer.loadFile(inputFile);
      const pdf=await printer.webContents.printToPDF({printBackground:true,preferCSSPageSize:true,pageSize:'A4',margins:{marginType:'none'},displayHeaderFooter:false});
      if(zip)zip.file(name,pdf);
-     else await fs.writeFile(path.join(dir,name),pdf,{flag:'wx'});
+     else await fs.writeFile(path.join(dir,name),pdf);
    }
    if(zip)await fs.writeFile(target,await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}));
    return {canceled:false,count:spec.files.length,location:target||dir};
