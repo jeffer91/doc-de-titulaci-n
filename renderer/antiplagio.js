@@ -6,7 +6,7 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
   const M=window.UTET_ANTIPLAGIO_MODEL;
   const $=id=>document.getElementById(id);
   const esc=M.E;
-  const at=()=>new Date().toLocaleDateString('en-CA');
+  const at=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
   const session={
     students:[],selected:new Map(),source:'',loadedPeriod:'',loading:false,
     query:'',career:'',showSources:'',preview:false,previewHTML:'',
