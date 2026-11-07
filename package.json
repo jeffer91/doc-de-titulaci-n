@@ -1,21 +1,61 @@
 {
   "name": "doc-de-titulacion",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "UTET PRO-164: SQLite local-first y Firebase bajo demanda",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
     "check": "node --check electron/main.js && node --check electron/excel.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js && node --check renderer/records.js && node --check renderer/antiplagio.model.js && node --check renderer/antiplagio.js && node --check electron/firebase-read.js && node --check electron/memo-numbering.js && node --check electron/antiplagio-store.js && node --check electron/antiplagio-local.js",
-    "test": "node tests/institutional.test.cjs && node tests/records.test.cjs && node tests/ui.test.cjs && node tests/antiplagio-auto.test.cjs && node tests/antiplagio.test.cjs && node tests/memo-numbering.test.cjs && node tests/antiplagio-local.test.cjs"
+    "test": "node tests/institutional.test.cjs && node tests/records.test.cjs && node tests/ui.test.cjs && node tests/antiplagio-auto.test.cjs && node tests/antiplagio.test.cjs && node tests/memo-numbering.test.cjs && node tests/antiplagio-local.test.cjs && node tests/branding.test.cjs",
+    "dist:win": "electron-builder --win nsis portable"
   },
   "devDependencies": {
-    "electron": "^38.0.0"
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
     "firebase": "12.11.0",
     "jszip": "^3.10.1",
     "sql.js": "^1.13.0"
+  },
+  "productName": "UTET - Gestor Documental",
+  "build": {
+    "appId": "ec.edu.itsqmet.utet.gestor-documental",
+    "productName": "UTET - Gestor Documental",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "package.json",
+      "!**/*.test.cjs"
+    ],
+    "win": {
+      "icon": "renderer/assets/utet-app-icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "UTET - Gestor Documental"
+    }
   }
 }

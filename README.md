@@ -1,6 +1,29 @@
-# Doc de Titulación · UTET (Electron v0.7.0)
+# Doc de Titulación · UTET (Electron v0.7.1)
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
+
+## Identidad visual UTET
+
+El icono propio de la app muestra **documento, sello y birrete** en azul marino y dorado; es distinto del logotipo institucional que se conserva en los PDF.
+
+- `renderer/assets/utet-app-icon.png`: imagen transparente de 256 × 256 para la cabecera, Linux y favicon alternativo.
+- `renderer/assets/utet-app-icon.ico`: icono Windows multirresolución (16, 32, 48, 64 y 256 px) para ventana, barra de tareas, instalador y accesos directos.
+- `renderer/index.html`: favicon de la pestaña/ventana web y logo en la barra superior.
+- `electron/main.js`: icono nativo de Electron y AppUserModelID para agrupar la app en la barra de tareas de Windows.
+- `package.json`: configuración de electron-builder para generar instalador Windows y versión portable con el icono integrado.
+
+Desarrollo:
+```powershell
+npm install
+npm start
+```
+
+Paquete de Windows (instalador con acceso directo de escritorio y menú Inicio; también genera portable):
+```powershell
+npm run dist:win
+```
+
+El instalador final se genera en `dist/` en Windows; un proyecto abierto con `npm start` sigue lanzándose a través de Electron y **no crea por sí mismo un acceso directo**. Los accesos directos anteriores pueden conservar su icono hasta reinstalar o actualizar el acceso directo. No se cambian los datos de SQLite ni el proyecto Firebase por este ajuste visual.
 
 ## PRO-164 · Memorandos individuales de similitud
 

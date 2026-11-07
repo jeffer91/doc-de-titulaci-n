@@ -13,13 +13,17 @@ const JSZip = require('jszip');
 
 const ROOT = path.join(__dirname, '..');
 const RENDERER = path.join(ROOT, 'renderer');
+// Identidad visual propia de UTET; no sustituye el membrete institucional de PDF.
+const WINDOW_ICON = path.join(RENDERER, 'assets', process.platform === 'win32' ? 'utet-app-icon.ico' : 'utet-app-icon.png');
+if (process.platform === 'win32') app.setAppUserModelId('ec.edu.itsqmet.utet.gestor-documental');
 const MAX_HTML = 2_000_000;
 
 function createWindow() {
   const win = new BrowserWindow({
     width: 1500, height: 930, minWidth: 1000, minHeight: 660,
     show: false, backgroundColor: '#f5f7fb',
-    title: 'UTET · Gestor Documental — Maqueta',
+    icon: WINDOW_ICON,
+    title: 'UTET · Gestor Documental',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false,
