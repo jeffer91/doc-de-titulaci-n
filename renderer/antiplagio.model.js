@@ -324,7 +324,7 @@
     const disclosure=demo?'<p class="ap-word-demonstration">DATOS ILUSTRATIVOS · NO CONSTITUYEN UN ANÁLISIS REAL</p>':'';
     const field=(label,value,cls='')=>'<div class="ap-word-field '+cls+'"><strong>'+E(label)+'</strong><b>:</b><span>'+value+'</span></div>';
     const bodyNote=ok?
-      'En virtud de que el porcentaje registrado es inferior al 20 %, se comunica que su trabajo <strong>APROBADO</strong> cumple el criterio de similitud aplicable al proceso de titulación.':
+      'En virtud de que el porcentaje registrado es inferior al 20 %, se comunica que el resultado es <strong>APROBADO</strong> y que su trabajo cumple el criterio de similitud aplicable al proceso de titulación.':
       'Dado que el porcentaje registrado alcanza o supera el 20 %, se comunica que su trabajo <strong>NO APROBADO</strong> debe ser corregido y presentado nuevamente para un nuevo análisis, sin establecer un plazo en este memorando.';
     const first='<section class="inst-page ap-page ap-word-memorandum">'+logo()+
       '<h1 class="ap-word-title">Memorando No. <span class="ap-word-code">'+E(folio)+'</span></h1>'+
