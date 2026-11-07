@@ -30,7 +30,7 @@ const tick=()=>new Promise(ok=>setImmediate(ok));
  assert.equal(calls.open,1);
  assert.equal(pending[0].periodId,periodId);
  assert.match(html(),/Cargando información local/);
- pending[0].resolve({periodoId,students:[{periodoId,cedula:'0105483465',nombres:'ESTUDIANTE EJEMPLO',carreraNombre:'ADMINISTRACIÓN',modalidad:'En línea'}],
+ pending[0].resolve({periodoId:periodId,students:[{periodoId:periodId,cedula:'0105483465',nombres:'ESTUDIANTE EJEMPLO',carreraNombre:'ADMINISTRACIÓN',modalidad:'En línea'}],
   actas:[],evidences:[],emision:{date:'2026-05-29',documentCode:'AT-ITSQMET-UTET-2026-05'}});
  await tick();await tick();
  assert.match(html(),/Acta de Titulación por Artículo Académico/);
