@@ -72,13 +72,14 @@ async function write(baseDir,action){
 }
 async function snapshot(baseDir,periodoId){
  if(!validPeriod(periodoId))throw Error('Período inválido.');
- // Respeta cualquier escritura local pendiente en la cola.
- await chain;
+ // Serializa también las lecturas: ninguna ve una transacción parcialmente aplicada.
+ return serialized(async()=>{
  const ctx=await open(baseDir),db=ctx.db;
  const meta=one(db,'SELECT sincronizado_en AS sincronizadoEn,estudiantes,memorandos FROM periodos_sync WHERE periodo_id=?',[periodoId]);
  const students=prepared(db,'SELECT estudiante_id AS estudianteId,periodo_id AS periodoId,cedula,nombres,carrera_id AS carreraId,carrera_nombre AS carreraNombre,modalidad,sede,jornada,retirado FROM estudiantes WHERE periodo_id=? ORDER BY nombres COLLATE NOCASE',[periodoId]).map(s=>({...s,retirado:!!s.retirado}));
  const records=prepared(db,'SELECT cedula,documento,estado FROM memorandos WHERE periodo_id=?',[periodoId]).map(x=>({...JSON.parse(x.documento),cedula:x.cedula,syncStatus:x.estado}));
  return {periodoId,hasCache:!!meta,syncedAt:meta?.sincronizadoEn||null,students,records,source:'SQLite local'};
+ });
 }
 function checkStudents(periodoId,students){
  if(!Array.isArray(students)||students.length>MAX_ROWS)throw Error('Listado Firebase fuera de límites.');
