@@ -307,7 +307,7 @@
   function individualHTML(row,meta,period){
     const n=number(row.similitud),ok=n!==null&&n<20;
     const norm=normalizeCareer(row.carreraNombre,row.modalidad),sourceFlags=row.fuentes||{};
-    const values=SOURCE_TYPES.map(x=>({label:x.label,active:sourceFlags[x.key]==='detected',state:sourceFlags[x.key]||'unknown'}));
+    const values=SOURCE_TYPES.map(x=>({key:x.key,label:x.label,active:sourceFlags[x.key]==='detected',state:sourceFlags[x.key]||'unknown'}));
     const ratio=n===null?0:n;
     const display=pformat(row.similitud);
     const result=n===null?'SIN RESULTADO':ok?'APROBADO':'NO APROBADO';
@@ -354,7 +354,7 @@
       '<div class="ap-share"><div class="ap-donut" style="--ap-value:'+ratio+'%"><span>'+E(display)+'</span></div>'+
       '<p>Índice de similitud registrado sobre el total del trabajo analizado. El porcentaje no demuestra, por sí solo, plagio.</p></div></div>'+
       '<h2>Fuentes consideradas</h2>'+
-      '<div class="ap-personal-sources">'+values.map(v=>'<div><span class="ap-source-dot '+(v.active?'active':'')+'"></span><strong>'+E(v.label)+'</strong><span>'+E(v.state==='detected'?'Coincidencia':v.state==='not-detected'?'Sin coincidencia':'Sin información')+'</span></div>').join('')+'</div>'+
+      '<div class="ap-personal-sources">'+values.map(v=>'<div><span class="ap-src ap-src-'+v.key+' '+(v.active?'ap-src-on':'ap-src-off')+'">'+glyph(v.key)+'</span><strong>'+E(v.label)+'</strong><span>'+E(v.state==='detected'?'Coincidencia':v.state==='not-detected'?'Sin coincidencia':'Sin información')+'</span></div>').join('')+'</div>'+
       '<p class="ap-caption">Las fuentes son indicadores de coincidencia, no porcentajes sumables. La clasificación académica se realiza según el índice general y el criterio institucional.</p>'+
       '<div class="ap-personal-card"><h2>Identificación del análisis</h2><div class="ap-personal-grid">'+dataRow('Memorando',folio)+dataRow('Referencia',reference)+dataRow('Fecha',day(fecha))+dataRow('Condición',result)+'</div></div>'+
       footer(2)+'</section>';
