@@ -63,6 +63,10 @@ async function check(count,expected){
     assert.ok(pdf.length>10000,'PDF no puede estar vacío');
     const detected=(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)||[]).length;
     assert.equal(detected,pages,'El PDF no debe agregar páginas ni perderlas: '+count+' estudiantes');
+    if(process.env.UTET_SMOKE_ARTIFACT_DIR && count===1){
+      fs.mkdirSync(process.env.UTET_SMOKE_ARTIFACT_DIR,{recursive:true});
+      fs.writeFileSync(path.join(process.env.UTET_SMOKE_ARTIFACT_DIR,'memorando-revision.pdf'),pdf);
+    }
     console.log('OK Electron PDF: '+count+' estudiantes, '+detected+' páginas, '+pdf.length+' bytes.');
   }finally{win.destroy();fs.rmSync(tmp,{recursive:true,force:true});}
 }

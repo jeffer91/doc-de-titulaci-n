@@ -19,6 +19,16 @@ jobs:
       - name: Probar registro, portadas y navegación
         run: npm test
       - name: Probar impresión real del memorando PDF con Electron
+        env:
+          UTET_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/utet-pdf-qa
         run: |
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --one
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --many
+      - name: Adjuntar PDF ficticio para inspección visual
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: memorando-control-PRO-164
+          path: ${{ runner.temp }}/utet-pdf-qa/memorando-revision.pdf
+          if-no-files-found: ignore
+          retention-days: 3

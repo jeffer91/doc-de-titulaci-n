@@ -25,7 +25,7 @@ assert.ok(Number(sample.similitud)<20);
 const row={...M.createRow({estudianteId:id,cedula:'0102030405',nombres:'Ejemplo académico',carreraId:'C01',carreraNombre:'ADMINISTRACIÓN ONLINE'}),...sample,
   fecha:date,modalidad:'',sede:'Matriz',jornada:'Nocturna',referencia:'UTET-ANT-2026-04-0001',folio:'01 MEM-ITSQMET-UTET-2026-04-15'};
 const html=M.individualHTML(row,{},'Octubre 2025 – Marzo 2026');
-assert.ok(html.includes('Notificación del resultado de similitud del trabajo de titulación'));
+assert.ok(html.includes('NOTIFICACIÓN DEL RESULTADO DE SIMILITUD DEL TRABAJO DE TITULACIÓN'));
 assert.ok(html.includes('Repositorio institucional ITSQMET'));
 assert.ok(html.includes('Modalidad de estudios'));
 assert.ok(html.includes('En línea'));
