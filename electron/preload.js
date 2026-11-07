@@ -13,5 +13,10 @@ contextBridge.exposeInMainWorld('utetDesktop', Object.freeze({
   getAntiplagioRecords: (periodoId,tipo='trabajo') => ipcRenderer.invoke('utet:antiplagio-list',periodoId,tipo),
   saveAntiplagioRecord: record => ipcRenderer.invoke('utet:antiplagio-save',record),
   exportAntiplagioFiles: spec => ipcRenderer.invoke('utet:antiplagio-export',spec),
+  openActaArticulo: p => ipcRenderer.invoke('utet:acta-articulo-open',p),
+  refreshActaArticulo: p => ipcRenderer.invoke('utet:acta-articulo-refresh',p),
+  verifyActaArticulo: (p,c) => ipcRenderer.invoke('utet:acta-articulo-verify',p,c),
+  issueActaArticulo: (p,c) => ipcRenderer.invoke('utet:acta-articulo-issue',p,c),
+  exportActaArticulo: spec => ipcRenderer.invoke('utet:acta-articulo-export',spec),
   platform: process.platform
 }));
