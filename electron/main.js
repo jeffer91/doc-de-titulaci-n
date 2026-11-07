@@ -184,7 +184,15 @@ async function saveAntiplagioRecord(record){
  return official;
 }
 
-app.whenReady().then(()=>{
+// Solo una instancia por perfil: evita dos escritores sobre el mismo archivo SQLite.
+const instanceLock=app.requestSingleInstanceLock();
+if(!instanceLock)app.quit();
+else {
+ app.on('second-instance',()=>{
+   const win=BrowserWindow.getAllWindows()[0];
+   if(win){if(win.isMinimized())win.restore();win.focus();}
+ });
+ app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);
   ipcMain.handle('utet:save-pdf',savePDF);
   ipcMain.handle('utet:memo-next',(event,date)=>{
@@ -205,3 +213,4 @@ app.whenReady().then(()=>{
   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});
 });
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit();});
+}
