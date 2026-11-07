@@ -19,7 +19,12 @@ async function request(url, options = {}) {
   });
   const raw = await response.text();
   let data;
-  try { data = raw ? JSON.parse(raw) : {}; } catch { throw new Error('Firebase devolvió una respuesta no válida.'); }
+  try { data = raw ? JSON.parse(raw) : {}; }
+  catch {
+    // Firestore batchGet y runQuery pueden devolver JSON delimitado por líneas.
+    try { data = raw.trim().split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line)); }
+    catch { throw new Error('Firebase devolvió una respuesta no válida.'); }
+  }
   if (!response.ok) {
     const reason = str(data.error?.message || response.statusText);
     if (response.status === 401 || response.status === 403)
