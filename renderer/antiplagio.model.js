@@ -315,31 +315,31 @@
     const conclusion=n===null?'No se dispone de un resultado para emitir una conclusión.':
       ok?'El índice registrado es inferior al 20 %, por lo que el trabajo cumple el criterio de similitud establecido.':
       'El índice registrado es igual o superior al 20 %, por lo que el trabajo NO APROBADO requiere corregir las coincidencias identificadas y presentar nuevamente el trabajo para un nuevo análisis.';
-    const demo=row.origen==='simulado';
+    const comparison=n===null?'no determinado':ok?'inferior':'igual o superior';
+    const resolution=n===null?'NO DISPONE DE RESULTADO':ok?'CUMPLE CON EL CRITERIO DE SIMILITUD':'NO CUMPLE CON EL CRITERIO DE SIMILITUD';
+    const disposition=n===null?'por lo que queda pendiente de revisión':
+      ok?'por lo que obtiene un resultado aprobado respecto de este requisito':
+      'por lo que corresponde efectuar las correcciones pertinentes y presentar nuevamente el trabajo para su análisis';
     const folio=t(row.folio)||t(meta.codigo),fecha=t(row.fecha)||t(meta.fecha);
     const reference=t(row.referencia)||'Pendiente';
     const dataRow=(k,v)=>'<div class="ap-detail"><span>'+E(k)+'</span><strong>'+E(v||'No registrado')+'</strong></div>';
     const logo=()=>'<div class="ap-word-logo"><img src="assets/logo-itsqmet.png" alt="Logotipo institucional ITSQMET"></div>';
     const footer=()=>'<div class="ap-word-footer"><img src="assets/memorando-pie-itsqmet.svg" alt="Pie institucional ITSQMET"></div>';
-    const simulationNote=demo?'<p class="ap-sample-note">Datos de demostración: índice y fuentes no verificados.</p>':'';
     const field=(label,value,cls='')=>'<div class="ap-word-field '+cls+'"><strong>'+E(label)+'</strong><b>:</b><span>'+value+'</span></div>';
-    const bodyNote=ok?
-      'En virtud de que el porcentaje registrado es inferior al 20 %, se comunica que el resultado es <strong>APROBADO</strong> y que su trabajo cumple el criterio de similitud aplicable al proceso de titulación.':
-      'Dado que el porcentaje registrado alcanza o supera el 20 %, se comunica que su trabajo <strong>NO APROBADO</strong> debe ser corregido y presentado nuevamente para un nuevo análisis, sin establecer un plazo en este memorando.';
     const first='<section class="inst-page ap-page ap-word-memorandum">'+logo()+
-      '<h1 class="ap-word-title">Memorando No. <span class="ap-word-code">'+E(folio)+'</span></h1>'+
+      '<h1 class="ap-word-title">Memorando N.º <span class="ap-word-code">'+E(folio)+'</span></h1>'+
       '<div class="ap-word-fields">'+
         field('PARA',E(row.nombres)+'<small>ESTUDIANTE</small>','ap-word-field-para')+
         field('DE','MSc. Jefferson Edgar Villarreal Enríquez<br><strong>COORDINADOR DE TITULACIÓN</strong>','ap-word-field-de')+
-        field('ASUNTO','NOTIFICACIÓN DEL RESULTADO DE SIMILITUD DEL TRABAJO DE TITULACIÓN','ap-word-field-asunto')+
+        field('ASUNTO','RESULTADO DEL ANÁLISIS DE SIMILITUD DEL TRABAJO DE TITULACIÓN','ap-word-field-asunto')+
         field('FECHA',E(day(fecha)),'ap-word-field-fecha')+
       '</div>'+
       '<div class="ap-word-body">'+
         '<p class="ap-word-salutation">De mi consideración:</p>'+
-        '<p>Por medio del presente, me dirijo a usted para comunicar el resultado del análisis de similitud de su trabajo de titulación, correspondiente al período académico <strong>'+E(period)+'</strong>.</p>'+
-        '<p>El porcentaje de similitud registrado es de <strong>'+E(display)+'</strong>. '+bodyNote+'</p>'+
-        '<p>El índice de similitud refleja coincidencias de contenido y no constituye, por sí solo, una determinación de plagio. El detalle académico, las fuentes consideradas y la referencia del reporte constan en el anexo que inicia en la segunda página.</p>'+
-
+        '<p>Por medio del presente, se notifica el resultado del análisis de similitud correspondiente a su trabajo de titulación, presentado durante el período académico '+E(period)+'.</p>'+
+        '<p>De acuerdo con el reporte de similitud, el trabajo presenta un índice del <strong>'+E(display)+'</strong>, '+E(comparison)+' al límite institucional establecido del 20 %. En consecuencia, se determina que el trabajo <strong>'+E(resolution)+'</strong>, '+E(disposition)+'.</p>'+
+        '<p>Es importante señalar que el índice de similitud identifica coincidencias textuales con distintas fuentes de información y no constituye, por sí mismo, una determinación de plagio ni implica la aprobación integral del trabajo de titulación.</p>'+
+        '<p>Para efectos de respaldo y seguimiento académico, se adjunta el reporte individual de similitud, que contiene la información académica del estudiante, el resultado obtenido y los datos de identificación del análisis realizado.</p>'+
       '</div>'+
       '<div class="ap-word-signature"><p>Atentamente,</p><div class="ap-word-signature-space" aria-hidden="true"></div>'+
         '<strong>MSc. Jefferson Edgar Villarreal Enríquez</strong><strong>COORDINADOR DE TITULACIÓN</strong></div>'+
@@ -365,7 +365,7 @@
       '<div class="ap-personal-card ap-word-reference"><h2>Identificación del análisis</h2><div class="ap-personal-grid">'+
         dataRow('Memorando',folio)+dataRow('Referencia',reference)+
         dataRow('Fecha',day(fecha))+dataRow('Condición',result)+'</div></div>'+
-      '<div class="ap-conclusion"><strong>Conclusión</strong><p>'+E(conclusion)+'</p></div>'+simulationNote+
+      '<div class="ap-conclusion"><strong>Conclusión</strong><p>'+E(conclusion)+'</p></div>'+
       footer()+'</section>';
     return '<div class="institutional-document inst-antiplagio">'+first+second+'</div>';
   }
