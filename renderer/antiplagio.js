@@ -1,177 +1,218 @@
 'use strict';
-/* Interfaz exclusiva PRO-164. Los datos personales y los resultados viven en memoria,
-   no en localStorage. Todos los demás documentos conservan sus propios formularios. */
-window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
+/* PRO-164 · Módulo compacto de antiplagio. Datos estudiantiles en memoria.
+   Firebase se consulta de forma directa, bajo demanda, sin pantalla de inicio de sesión. */
+window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   const {state,period,go,render,showToast}=ctx;
   const M=window.UTET_ANTIPLAGIO_MODEL;
   const $=id=>document.getElementById(id);
   const esc=M.E;
-  const at=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
-  const session={
-    students:[],selected:new Map(),source:'',loadedPeriod:'',loading:false,
-    query:'',career:'',showSources:'',preview:false,previewHTML:'',
-    status:'Consulta no iniciada.',error:'',problems:[],busy:false,
-    firebase:{authenticated:false,email:''},folio:null,folioStatus:'Consultando numeración...',folioRequest:0
+  const today=()=>{
+    const d=new Date();
+    return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
   };
-  const meta={codigo:'',destinatario:'',cargoDestinatario:'',
-    fecha:at(),fechaCorte:at(),herramienta:''};
-  const students=()=>session.students.filter(s=>{
-    const q=session.query.toLocaleLowerCase('es');
-    return (!session.career||s.carreraNombre===session.career)&&(!q||
-      (s.nombres+' '+s.cedula+' '+s.carreraNombre).toLocaleLowerCase('es').includes(q));
-  });
+  const norm=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const meta={codigo:'',destinatario:'',cargoDestinatario:'',fecha:today(),fechaCorte:today(),herramienta:''};
+  const session={
+    students:[],selected:new Map(),loadedPeriod:'',loadingPeriod:'',loading:false,loadRequest:0,
+    query:'',career:'',showSources:'',status:'Sin consultar',error:'',
+    preview:false,previewHTML:'',problems:[],busy:false,
+    folio:null,folioStatus:'Pendiente',folioRequest:0
+  };
   const chosen=()=>[...session.selected.values()];
-  function errorMessage(e){session.error=String(e?.message||e||'Error desconocido');showToast(session.error.slice(0,170));render();}
-  function clearPeriod(){
-    session.students=[];session.selected.clear();session.loadedPeriod='';
-    session.query='';session.career='';session.preview=false;session.previewHTML='';
-    session.error='';session.problems=[];session.status='Consulta no iniciada.';
+  const filtered=()=>session.students.filter(s=>
+    (!session.career||s.carreraNombre===session.career)&&
+    (!session.query||norm(s.nombres+' '+s.cedula+' '+s.carreraNombre).includes(norm(session.query))));
+  const button=(action,label,cls='btn btn-small',id='')=>
+    '<button type="button" class="'+cls+'" data-action="'+action+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+label+'</button>';
+  const input=(label,key,type='text',placeholder='')=>
+    '<label class="ap-label">'+esc(label)+'<input data-ap-meta="'+key+'" type="'+type+'" value="'+esc(meta[key]||'')+
+    '" placeholder="'+esc(placeholder)+'"></label>';
+  const choices=()=>[...new Set(session.students.map(s=>s.carreraNombre).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'es'));
+
+  function reset(){
+    session.loadRequest++;
+    session.students=[];session.selected.clear();
+    session.loadedPeriod='';session.loadingPeriod='';session.loading=false;
+    session.query='';session.career='';session.showSources='';
+    session.error='';session.status='Sin consultar';
+    session.problems=[];session.preview=false;session.previewHTML='';
+  }
+  function alertError(error){
+    session.error=String(error?.message||error||'No se pudo completar la operación.');
+    showToast(session.error.slice(0,140));
+    render();
   }
   async function refreshFolio(){
     const date=meta.fecha,request=++session.folioRequest;
-    meta.codigo='';session.folio=null;
-    session.folioStatus='Consultando siguiente consecutivo...';session.preview=false;
-    render();
+    meta.codigo='';session.folio=null;session.folioStatus='Consultando...';
+    session.preview=false;render();
     try{
-      if(!window.utetDesktop?.previewMemoNumber)
-        throw new Error('Actualiza Electron para numerar memorandos.');
+      if(!window.utetDesktop?.previewMemoNumber)throw new Error('Actualiza la aplicación.');
       const next=await window.utetDesktop.previewMemoNumber(date);
       if(request!==session.folioRequest||date!==meta.fecha)return;
       session.folio=next;meta.codigo=next.code;
-      session.folioStatus='Número provisional. Se reserva al confirmar la exportación.';
-    }catch(e){
+      session.folioStatus='Provisional · se reserva al generar el PDF';
+    }catch(error){
       if(request!==session.folioRequest)return;
-      session.folioStatus=String(e.message||e);
+      session.folioStatus=String(error?.message||error);
     }
     render();
   }
   function open(){
-    if(session.loadedPeriod && session.loadedPeriod!==state.periodId)clearPeriod();
+    if(session.loadedPeriod && session.loadedPeriod!==state.periodId)reset();
     go('antiplagio');
     refreshFolio();
+    // Al abrir, consultar automáticamente. Si ya hay datos de la misma sesión,
+    // conservarlos para no perder porcentajes ingresados.
+    if(session.loadedPeriod!==state.periodId && !session.loading)load();
   }
-  const button=(action,label,cls='btn',id='')=>'<button type="button" class="'+cls+'" data-action="'+action+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+label+'</button>';
-  const input=(label,key,opts={})=>'<label class="ap-label">'+esc(label)+
-    '<input data-ap-meta="'+key+'" type="'+(opts.type||'text')+'" value="'+esc(meta[key]||'')+'" placeholder="'+esc(opts.placeholder||'')+'"></label>';
-  const careerOptions=()=>{
-    const cs=[...new Set(session.students.map(s=>s.carreraNombre).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-    return '<option value="">Todas las carreras</option>'+cs.map(x=>'<option value="'+esc(x)+'" '+(x===session.career?'selected':'')+'>'+esc(x)+'</option>').join('');
-  };
+  function onPeriodChange(){
+    reset();
+    go('antiplagio');
+    load();
+  }
+  async function load(force=false){
+    const target=state.periodId;
+    if(session.loading && session.loadingPeriod===target)return;
+    if(force && session.selected.size && !confirm('Actualizar descartará los resultados registrados. ¿Continuar?'))return;
+    if(force||session.loadedPeriod!==target)reset();
+    const request=++session.loadRequest;
+    session.loading=true;session.loadingPeriod=target;
+    session.status='Cargando estudiantes...';session.error='';
+    render();
+    try{
+      if(!window.utetDesktop?.loadAntiplagioStudents)throw new Error('Se necesita la app Electron actualizada.');
+      const data=await window.utetDesktop.loadAntiplagioStudents(target);
+      if(request!==session.loadRequest||state.periodId!==target)return;
+      if(!data||data.periodoId!==target||!Array.isArray(data.students))
+        throw new Error('Firebase devolvió un período o listado inesperado.');
+      session.students=data.students;
+      session.loadedPeriod=target;
+      session.status=data.students.length+' estudiantes · Firebase';
+      session.error='';
+    }catch(error){
+      if(request!==session.loadRequest||state.periodId!==target)return;
+      session.students=[];session.loadedPeriod='';
+      session.status='No disponible';
+      session.error=String(error?.message||error);
+    }finally{
+      if(request===session.loadRequest && state.periodId===target){
+        session.loading=false;session.loadingPeriod='';render();
+      }
+    }
+  }
+  function tableBody(){
+    return filtered().slice(0,80).map(s=>{
+      const isChosen=session.selected.has(s.cedula);
+      return '<tr><td class="ap-pick-cell">'+button('ap-add',isChosen?'✓':'＋',
+        'ap-pick'+(isChosen?' selected':''),s.cedula)+'</td>'+
+        '<td class="ap-name">'+esc(s.nombres||'Sin nombre')+
+        (s.retirado?'<small class="ap-bad"> · Retirado</small>':'')+
+        '<small>'+esc(s.cedula)+'</small></td><td>'+esc(s.carreraNombre||'Sin carrera')+'</td></tr>';
+    }).join('');
+  }
+  function countLabel(){
+    const count=filtered().length;
+    return count+' encontrados'+(count>80?' · 80 visibles':'')+' · '+session.selected.size+' seleccionados';
+  }
+  function updateSearchResults(){
+    const list=$('ap-search-body'),count=$('ap-search-count');
+    if(list)list.innerHTML=tableBody();
+    if(count)count.textContent=countLabel();
+  }
   function results(){
-    if(session.loadedPeriod!==state.periodId)return '<p class="ap-empty">Consulta Firebase para ver a los estudiantes de este período.</p>';
-    const matches=students(),show=matches.slice(0,80);
-    return '<div class="ap-row"><div class="ap-inline"><label class="ap-label">Filtrar carrera<select id="ap-career">'+careerOptions()+
-      '</select></label><label class="ap-label">Buscar<input id="ap-query" placeholder="Apellidos, nombres o cédula" value="'+esc(session.query)+'"></label>'+
-      button('ap-search','Buscar','btn btn-small')+'</div><div class="ap-actions">'+
-      button('ap-select-visible','Añadir resultados filtrados','btn btn-small')+
-      button('ap-clear','Vaciar selección','btn btn-small')+'</div></div>'+
-      '<p class="ap-status">'+matches.length+' coincidencias · mostrando '+show.length+' · '+session.selected.size+' seleccionados.</p>'+
-      '<div class="ap-results"><table><thead><tr><th>Añadir</th><th>Cédula</th><th>Apellidos y nombres</th><th>Carrera</th></tr></thead><tbody>'+
-      show.map(s=>'<tr><td>'+button('ap-add',session.selected.has(s.cedula)?'Quitar':'Añadir','btn btn-small',s.cedula)+'</td>'+
-        '<td>'+esc(s.cedula)+'</td><td>'+esc(s.nombres||'Nombre no informado')+
-        (s.retirado?' <span class="ap-bad">(retirado)</span>':'')+'</td><td>'+esc(s.carreraNombre||'Sin carrera')+'</td></tr>').join('')+
-      '</tbody></table></div>';
+    const careers=choices();
+    const content=session.loadedPeriod===state.periodId?
+      '<div class="ap-filterbar">'+
+        '<input id="ap-query" class="ap-filter-input" aria-label="Buscar estudiantes" type="search" autocomplete="off" placeholder="Buscar nombre o cédula..." value="'+esc(session.query)+'">'+
+        '<select id="ap-career" aria-label="Filtrar carrera"><option value="">Todas las carreras</option>'+
+        careers.map(c=>'<option value="'+esc(c)+'" '+(session.career===c?'selected':'')+'>'+esc(c)+'</option>').join('')+
+        '</select>'+button('ap-select-visible','Añadir filtrados')+'</div>'+
+        '<div class="ap-results"><table><thead><tr><th></th><th>Estudiante</th><th>Carrera</th></tr></thead>'+
+        '<tbody id="ap-search-body">'+tableBody()+'</tbody></table></div>'+
+        '<div class="ap-inline ap-row-footer"><span id="ap-search-count">'+countLabel()+'</span>'+
+        (session.selected.size?button('ap-clear','Vaciar selección','ap-link'):'')+'</div>'
+      :'<p class="ap-empty">'+(session.loading?'Cargando estudiantes...':session.error?'No se pudo consultar el período.':'Sin estudiantes cargados.')+'</p>';
+    return content;
   }
-  function sources(r){
-    return '<div class="ap-src-editor">'+M.SOURCE_TYPES.map(s=>'<label>'+esc(s.label)+
-      '<select data-ap-id="'+esc(r.cedula)+'" data-ap-source="'+s.key+'">'+
-      ['unknown','detected','not-detected'].map((v,i)=>'<option value="'+v+'" '+(r.fuentes[s.key]===v?'selected':'')+'>'+
-        ['Sin información','Detectada','No detectada'][i]+'</option>').join('')+'</select></label>').join('')+'</div>';
+  function sources(row){
+    return '<div class="ap-src-editor">'+M.SOURCE_TYPES.map(s=>
+      '<label>'+esc(s.label)+'<select data-ap-id="'+esc(row.cedula)+'" data-ap-source="'+s.key+'">'+
+      [['unknown','Sin datos'],['detected','Detectada'],['not-detected','No detectada']]
+        .map(([value,name])=>'<option value="'+value+'" '+(row.fuentes[s.key]===value?'selected':'')+'>'+name+'</option>').join('')+
+      '</select></label>').join('')+'</div>';
   }
   function editTable(){
     const rows=chosen();
-    if(!rows.length)return '<div class="ap-empty">Selecciona estudiantes para registrar sus índices de similitud.</div>';
-    return '<p class="ap-note">Registra el porcentaje real (0–100), sin modificarlo. Para el PDF operativo solo se aceptan estudiantes con resultados de 0–19 % confirmados y fechados. Las fuentes se marcan únicamente a partir de la evidencia.</p>'+
-      '<div class="ap-table-wrap"><table class="ap-edit-table"><thead><tr><th>Estudiante</th><th>Similitud</th>'+
-      '<th>Fecha del reporte</th><th>Referencia / herramienta</th><th>Confirmación</th><th>Fuentes</th><th></th></tr></thead><tbody>'+
-      rows.map(r=>'<tr><td class="ap-identity"><strong>'+esc(r.nombres||'Nombre pendiente')+'</strong><br>'+
-        esc(r.cedula)+'<br><small>'+esc(r.carreraNombre||'Carrera pendiente')+'</small></td>'+
-        '<td><input aria-label="Similitud de '+esc(r.nombres)+'" type="text" inputmode="decimal" placeholder="0–100" data-ap-id="'+esc(r.cedula)+'" data-ap-field="similitud" value="'+esc(r.similitud)+'">'+
-        '<div class="'+(M.number(r.similitud)!==null&&M.number(r.similitud)<=19?'ap-good':'ap-bad')+' ap-status">'+esc(M.rowState(r))+'</div></td>'+
-        '<td><input type="date" data-ap-id="'+esc(r.cedula)+'" data-ap-field="fechaReporte" value="'+esc(r.fechaReporte)+'"></td>'+
-        '<td><input placeholder="ID o enlace del reporte" data-ap-id="'+esc(r.cedula)+'" data-ap-field="referencia" value="'+esc(r.referencia)+'">'+
-        '<input placeholder="Herramienta (según evidencia)" data-ap-id="'+esc(r.cedula)+'" data-ap-field="herramienta" value="'+esc(r.herramienta)+'"></td>'+
-        '<td><label class="ap-mini"><input type="checkbox" data-ap-id="'+esc(r.cedula)+'" data-ap-field="confirmado" '+(r.confirmado?'checked':'')+'> Confirmo resultado real</label></td>'+
-        '<td>'+button('ap-sources',session.showSources===r.cedula?'Ocultar fuentes':'Configurar fuentes','btn btn-small',r.cedula)+
-          (session.showSources===r.cedula?sources(r):'')+'</td>'+
-        '<td>'+button('ap-remove','Quitar','btn btn-small',r.cedula)+'</td></tr>').join('')+'</tbody></table></div>';
+    if(!rows.length)return '<div class="ap-empty ap-empty-selection">Selecciona estudiantes para registrar los resultados.</div>';
+    return '<div class="ap-table-wrap"><table class="ap-edit-table"><thead><tr>'+
+      '<th>Estudiante</th><th>Similitud</th><th>Fecha</th><th>Evidencia</th><th>Verificado</th><th>Fuentes</th><th></th>'+
+      '</tr></thead><tbody>'+rows.map(row=>
+      '<tr><td class="ap-identity"><strong>'+esc(row.nombres||'Sin nombre')+'</strong>'+
+        '<small>'+esc(row.cedula)+' · '+esc(row.carreraNombre||'Sin carrera')+'</small></td>'+
+      '<td><input aria-label="Similitud de '+esc(row.nombres)+'" type="text" inputmode="decimal" placeholder="0–19 %"'+
+        ' data-ap-id="'+esc(row.cedula)+'" data-ap-field="similitud" value="'+esc(row.similitud)+'">'+
+        '<small class="ap-status '+(M.number(row.similitud)!==null&&M.number(row.similitud)<=19?'ap-good':'ap-bad')+'">'+esc(M.rowState(row))+'</small></td>'+
+      '<td><input aria-label="Fecha del reporte de '+esc(row.nombres)+'" type="date" data-ap-id="'+esc(row.cedula)+'" data-ap-field="fechaReporte" value="'+esc(row.fechaReporte)+'"></td>'+
+      '<td><input aria-label="Referencia" placeholder="ID o enlace" data-ap-id="'+esc(row.cedula)+'" data-ap-field="referencia" value="'+esc(row.referencia)+'">'+
+        '<input aria-label="Herramienta" placeholder="Herramienta" data-ap-id="'+esc(row.cedula)+'" data-ap-field="herramienta" value="'+esc(row.herramienta)+'"></td>'+
+      '<td><input type="checkbox" aria-label="Resultado verificado de '+esc(row.nombres)+'" data-ap-id="'+esc(row.cedula)+'" data-ap-field="confirmado" '+(row.confirmado?'checked':'')+'></td>'+
+      '<td>'+button('ap-sources',session.showSources===row.cedula?'Ocultar':'Fuentes','ap-link',row.cedula)+
+      (session.showSources===row.cedula?sources(row):'')+'</td>'+
+      '<td>'+button('ap-remove','Quitar','ap-link',row.cedula)+'</td></tr>').join('')+'</tbody></table></div>';
   }
   function configuration(){
-    return '<div class="ap-form-grid">'+
-      input('Fecha del memorando','fecha',{type:'date'})+
-      '<div class="ap-label"><span>Numeración mensual automática · UTET</span>'+
-      '<div class="ap-code-field"><strong>No. '+esc(meta.codigo||'Pendiente de consulta')+'</strong></div>'+
-      '<small class="ap-mini">'+esc(session.folioStatus)+'</small></div>'+
-      input('Fecha de corte','fechaCorte',{type:'date'})+
-      input('Autoridad destinataria','destinatario')+input('Cargo del destinatario','cargoDestinatario')+
-      input('Herramienta común (si está documentada)','herramienta',{placeholder:'Opcional; según evidencia'})+'</div>'+
-      '<p class="ap-mini">El número XX se incrementa entre memorandos del mismo mes y vuelve a 01 en cada mes nuevo, tomando la fecha de emisión (AAAA-MM-DD). Se conserva únicamente en este equipo; no se garantiza coincidencia con memorandos emitidos desde otros equipos o fuera de la app.</p>'+
-      '<p class="ap-mini">Remitente fijo: MSc. Jefferson Edgar Villarreal Enríquez — Coordinador de Titulación. El espacio de firma permanece sin firmar.</p>';
+    return '<div class="ap-form-grid ap-form-compact">'+
+      input('Fecha de emisión','fecha','date')+
+      '<div class="ap-label"><span>Memorando · consecutivo mensual</span>'+
+        '<div class="ap-code-field"><strong>No. '+esc(meta.codigo||'Pendiente')+'</strong></div>'+
+        '<small class="ap-mini">'+esc(session.folioStatus)+'</small></div>'+
+      input('Fecha de corte','fechaCorte','date')+
+      input('Destinatario','destinatario')+
+      input('Cargo','cargoDestinatario')+
+      input('Herramienta (opcional)','herramienta','text','Según evidencia')+
+      '</div>';
   }
   function renderView(){
-    const rows=chosen(),sum=M.summary(rows);
-    return '<div class="ap-workspace">'+
-      '<div class="ap-title"><div><h1>Porcentaje de Antiplagio · PRO-164</h1>'+
-      '<p>Memorando institucional y reporte visual. Un único PDF · datos reales · sin Excel.</p></div>'+
-      button('ap-back','← Volver al catálogo','btn btn-small')+'</div>'+
-      '<section class="ap-panel"><h2>1. Consultar estudiantes desde Firebase</h2>'+
-      '<p class="ap-note">Origen: proyecto utet-4387a, colecciones <strong>matriculas</strong> y <strong>Estudiante</strong>. '+
-      'Esta consulta no escribe ni modifica datos académicos. La app no guarda cédulas ni porcentajes en el almacenamiento local.</p>'+
-      '<div class="ap-row" style="margin-top:12px"><div><strong>Período: '+esc(period().label)+'</strong>'+
-      '<p class="ap-status">'+esc(session.status)+'</p></div>'+
-      '<div class="ap-actions">'+button('ap-load',session.loading?'Consultando...':'Consultar estudiantes','btn btn-primary')+'</div></div>'+
-      '<details><summary class="ap-mini">Iniciar sesión en Firebase (solo si el acceso lo requiere)</summary>'+
-      '<div class="ap-inline" style="margin-top:10px">'+
-      '<label class="ap-label">Correo institucional<input type="email" id="ap-email" autocomplete="off"></label>'+
-      '<label class="ap-label">Contraseña<input type="password" id="ap-password" autocomplete="off"></label>'+
-      button('ap-login','Iniciar sesión','btn btn-small')+
-      (session.firebase.authenticated?button('ap-logout','Cerrar sesión','btn btn-small'):'')+
-      '</div><p class="ap-mini">Sesión '+(session.firebase.authenticated?'iniciada: '+esc(session.firebase.email):'no iniciada')+
-      '. La contraseña no se almacena.</p></details>'+
-      (session.error?'<p class="ap-note ap-error">'+esc(session.error)+'</p>':'')+
-      '<div style="margin-top:14px">'+results()+'</div></section>'+
-      '<section class="ap-panel"><div class="ap-row"><h2>2. Resultados y evidencia</h2><span class="ap-pill">'+rows.length+' seleccionados</span></div>'+
-      editTable()+'</section>'+
-      '<section class="ap-panel"><h2>3. Configuración del memorando</h2>'+configuration()+'</section>'+
-      '<section class="ap-panel"><h2>4. Validar y generar PDF</h2>'+
-      '<div class="ap-inline"><span class="ap-pill">Seleccionados: '+sum.total+'</span>'+
-      '<span class="ap-pill">Con resultado: '+sum.present+'</span>'+
-      '<span class="ap-pill">0–19 %: '+sum.inRange+'</span>'+
-      '<span class="ap-pill">Fuera de rango: '+sum.outRange+'</span></div>'+
-      '<p class="ap-mini">La primera hoja es el memorando; la segunda comienza el reporte; siguen las tablas y los gráficos de distribución, comparación y fuentes verificadas.</p>'+
-      (session.problems.length?'<div class="ap-note ap-error"><strong>No se puede emitir todavía:</strong><ul>'+
-      session.problems.slice(0,20).map(p=>'<li>'+esc(p)+'</li>').join('')+
-      (session.problems.length>20?'<li>Y '+(session.problems.length-20)+' observaciones adicionales.</li>':'')+
-      '</ul></div>':'')+
-      '<div class="ap-actions">'+button('ap-preview','Actualizar vista previa','btn')+
-      button('ap-export',session.busy?'Generando...':'Generar PDF institucional','btn btn-primary')+'</div>'+
-      (session.preview?'<div class="ap-preview-scroll">'+session.previewHTML+'</div>':'')+
+    const count=chosen().length,stats=M.summary(chosen());
+    return '<div class="ap-workspace ap-compact">'+
+      '<div class="ap-title"><div><h1>Antiplagio <span>· PRO-164</span></h1></div>'+
+        '<div class="ap-actions"><span class="ap-connect'+(session.loadedPeriod===state.periodId?' ready':session.error?' failed':'')+'">'+
+        (session.loading?'● Conectando':session.error?'● Sin conexión':session.loadedPeriod===state.periodId?'● Firebase listo':'● Firebase')+
+        '</span>'+button('ap-back','Volver','ap-link')+'</div></div>'+
+      '<section class="ap-panel ap-panel-main">'+
+        '<div class="ap-section-head"><h2>Estudiantes <span>· '+esc(period().label)+'</span></h2>'+
+        '<div class="ap-actions"><span class="ap-mini" aria-live="polite">'+esc(session.status)+'</span>'+
+        button('ap-refresh','Actualizar')+'</div></div>'+
+        (session.error?'<div class="ap-error ap-mini" role="alert">'+esc(session.error)+'</div>':'')+
+        results()+
+        '<div class="ap-section-head ap-subsection"><h2>Resultados</h2><span class="ap-pill">'+count+' seleccionados</span></div>'+
+        editTable()+'</section>'+
+      '<section class="ap-panel ap-panel-output"><div class="ap-section-head"><h2>Memorando y PDF</h2>'+
+        '<div class="ap-mini">0–19 %: '+stats.inRange+' · Fuera de rango: '+stats.outRange+'</div></div>'+
+        configuration()+
+        (session.problems.length?'<div class="ap-validation ap-error" role="alert"><strong>Corrige '+session.problems.length+' observaciones</strong><ul>'+
+        session.problems.slice(0,10).map(x=>'<li>'+esc(x)+'</li>').join('')+
+        (session.problems.length>10?'<li>Y '+(session.problems.length-10)+' más.</li>':'')+'</ul></div>':'')+
+        '<div class="ap-actions ap-exportbar">'+
+        button('ap-preview','Vista previa','btn')+
+        button('ap-export',session.busy?'Generando...':'Generar PDF','btn btn-primary')+
+        '<span class="ap-mini">No. automático · PDF sin firma</span></div>'+
+        (session.preview?'<div class="ap-preview-scroll">'+session.previewHTML+'</div>':'')+
       '</section></div>';
   }
-  async function load(){
-    if(session.loading)return;
-    if(session.selected.size && !confirm('Volver a consultar descartará los resultados registrados en esta sesión. ¿Continuar?'))return;
-    clearPeriod();session.loading=true;session.status='Consultando matrículas y estudiantes...';render();
-    try{
-      if(!window.utetDesktop?.loadAntiplagioStudents)throw new Error('Esta función requiere la aplicación Electron actualizada.');
-      const out=await window.utetDesktop.loadAntiplagioStudents(state.periodId);
-      if(out.periodoId!==state.periodId)throw new Error('Cambió el período durante la consulta. Vuelve a consultar.');
-      session.students=out.students;session.loadedPeriod=state.periodId;session.source=out.source;
-      session.status=out.students.length+' estudiantes disponibles. Fuente: '+out.source+' · consulta '+new Date(out.readAt).toLocaleString('es-EC');
-      session.error='';render();
-    }catch(e){errorMessage(e)}
-    finally{session.loading=false;render();}
-  }
   function addOne(id){
-    const student=session.students.find(x=>x.cedula===id);
-    if(!student)return;
+    const person=session.students.find(s=>s.cedula===id);
+    if(!person)return;
     if(session.selected.has(id))session.selected.delete(id);
-    else session.selected.set(id,M.createRow(student));
+    else session.selected.set(id,M.createRow(person));
     session.preview=false;session.problems=[];render();
   }
   function showPreview(){
     const rows=chosen();
     session.problems=M.validate(rows,meta);
+    if(!rows.length){render();return;}
     session.previewHTML=M.renderPDF(meta,rows,period().label);
     session.preview=true;render();
   }
@@ -179,79 +220,76 @@ window.UTET_ANTIPLAGIO = Object.freeze({create:function createAntiplagio(ctx){
     if(session.busy)return;
     const rows=chosen(),errors=M.validate(rows,meta);
     session.problems=errors;
-    if(errors.length){session.preview=false;render();showToast('Corrige '+errors.length+' observaciones antes de generar el PDF.');return;}
-    if(!window.utetDesktop?.exportPDF){showToast('Se requiere Electron para exportar el PDF.');return;}
+    if(errors.length){session.preview=false;render();showToast('Corrige '+errors.length+' observaciones.');return;}
+    if(!window.utetDesktop?.exportPDF){showToast('Se requiere Electron para guardar el PDF.');return;}
     session.busy=true;render();
     try{
-      // El PDF definitivo nunca usa el número provisional: Electron asigna
-      // el siguiente folio en el instante de emitir y sustituye el marcador.
-      const provisional=M.renderPDF({...meta,codigo:'UTET_MEMO_CODE_PENDING'},rows,period().label);
-      const name='MEM_ANTIPLAGIO_'+M.escapeFilename(state.periodId)+'_'+
+      // El número provisional no es el definitivo; Electron lo reserva al emitir.
+      const html=M.renderPDF({...meta,codigo:'UTET_MEMO_CODE_PENDING'},rows,period().label);
+      const filename='MEM_ANTIPLAGIO_'+M.escapeFilename(state.periodId)+'_'+
         M.escapeFilename(meta.fecha)+'_'+M.escapeFilename(meta.codigo);
-      const out=await window.utetDesktop.exportPDF({
-        html:provisional,suggestedName:name,kind:'antiplagio',memoDate:meta.fecha
-      });
+      const out=await window.utetDesktop.exportPDF({html,suggestedName:filename,kind:'antiplagio',memoDate:meta.fecha});
       if(!out?.canceled){
-        showToast('PDF generado · No. '+out.memoCode+'. El documento requiere tu firma válida.');
+        showToast('PDF generado · No. '+out.memoCode+'. Requiere firma válida.');
         session.preview=false;session.previewHTML='';
         await refreshFolio();
       }
-    }catch(e){errorMessage(e)}
+    }catch(error){alertError(error)}
     finally{session.busy=false;render();}
   }
-  async function login(){
-    const email=$('ap-email')?.value||'',password=$('ap-password')?.value||'';
-    try{
-      if(!window.utetDesktop?.antiplagioFirebaseLogin)throw new Error('Actualiza la aplicación Electron.');
-      session.firebase=await window.utetDesktop.antiplagioFirebaseLogin({email,password});
-      session.error='';showToast('Sesión de Firebase iniciada.');render();
-    }catch(e){errorMessage(e)}
-  }
   function handleAction(action,id){
-    if(action==='rec-open' && id==='plagio-trabajo'){open();return true;}
-    if(action==='new-doc' && id==='plagio-trabajo'){open();return true;}
+    if((action==='rec-open'||action==='new-doc')&&id==='plagio-trabajo'){open();return true;}
     if(!action?.startsWith('ap-'))return false;
     if(action==='ap-back')go('documentos');
-    else if(action==='ap-load')load();
-    else if(action==='ap-login')login();
-    else if(action==='ap-logout'){window.utetDesktop?.antiplagioFirebaseLogout?.().then(r=>{session.firebase=r;render();}).catch(errorMessage);}
-    else if(action==='ap-search'){session.query=$('ap-query')?.value.trim()||'';session.career=$('ap-career')?.value||'';render();}
+    else if(action==='ap-refresh')load(true);
     else if(action==='ap-add')addOne(id);
-    else if(action==='ap-remove'){session.selected.delete(id);session.preview=false;render();}
-    else if(action==='ap-clear'){if(!session.selected.size||confirm('¿Vaciar toda la selección?')){session.selected.clear();session.preview=false;render();}}
+    else if(action==='ap-remove'){session.selected.delete(id);session.preview=false;session.problems=[];render();}
     else if(action==='ap-select-visible'){
-      session.query=$('ap-query')?.value.trim()||'';
+      session.query=$('ap-query')?.value||session.query;
       session.career=$('ap-career')?.value||'';
-      const visible=students();
-      if(visible.length>80&&!confirm('¿Incluir los '+visible.length+' estudiantes filtrados?'))return true;
-      visible.forEach(s=>{if(!session.selected.has(s.cedula))session.selected.set(s.cedula,M.createRow(s));});
-      session.preview=false;render();
-    }
-    else if(action==='ap-sources'){session.showSources=session.showSources===id?'':id;render();}
+      const values=filtered();
+      if(values.length>80 && !confirm('¿Añadir los '+values.length+' estudiantes filtrados?'))return true;
+      values.forEach(s=>{if(!session.selected.has(s.cedula))session.selected.set(s.cedula,M.createRow(s));});
+      session.preview=false;session.problems=[];render();
+    }else if(action==='ap-clear'){
+      if(!session.selected.size||confirm('¿Vaciar la selección?')){
+        session.selected.clear();session.preview=false;session.problems=[];render();
+      }
+    }else if(action==='ap-sources'){session.showSources=session.showSources===id?'':id;render();}
     else if(action==='ap-preview')showPreview();
     else if(action==='ap-export')exportPDF();
     return true;
   }
-  function inputChange(e){
-    const target=e.target;
+  function inputChange(event){
+    const target=event.target;
+    if(!target)return;
+    if(target.id==='ap-query'){
+      session.query=target.value||'';updateSearchResults();return;
+    }
+    if(target.id==='ap-career'){
+      session.career=target.value||'';updateSearchResults();return;
+    }
     const key=target.dataset?.apMeta;
-    if(key && key!=='codigo' && Object.prototype.hasOwnProperty.call(meta,key)){
+    if(key&&key!=='codigo'&&Object.prototype.hasOwnProperty.call(meta,key)){
       const changed=meta[key]!==target.value;
-      meta[key]=target.value;session.preview=false;
+      meta[key]=target.value;session.preview=false;session.problems=[];
       if(key==='fecha'&&changed){refreshFolio();return;}
     }
-    const id=target.dataset?.apId,r=session.selected.get(id);
-    if(r){
-      if(target.dataset?.apField){
-        const k=target.dataset.apField;
-        if(['similitud','fechaReporte','referencia','herramienta','confirmado'].includes(k))
-          r[k]=k==='confirmado'?target.checked:target.value;
-      }
-      if(target.dataset?.apSource && M.SOURCE_TYPES.some(s=>s.key===target.dataset.apSource))
-        r.fuentes[target.dataset.apSource]=target.value;
-      session.preview=false;session.problems=[];
+    const id=target.dataset?.apId,row=session.selected.get(id);
+    if(!row)return;
+    if(target.dataset.apField){
+      const field=target.dataset.apField;
+      if(['similitud','fechaReporte','referencia','herramienta','confirmado'].includes(field))
+        row[field]=field==='confirmado'?target.checked:target.value;
     }
-    if(target.id==='ap-career'){session.career=target.value;render();}
+    if(target.dataset.apSource&&M.SOURCE_TYPES.some(s=>s.key===target.dataset.apSource))
+      row.fuentes[target.dataset.apSource]=target.value;
+    session.preview=false;session.problems=[];
+    if(target.dataset.apField==='similitud'){
+      const status=target.closest?.('td')?.querySelector?.('.ap-status');
+      if(status){status.textContent=M.rowState(row);
+        status.className='ap-status '+(M.number(row.similitud)!==null&&M.number(row.similitud)<=19?'ap-good':'ap-bad');}
+    }
   }
-  return {open,render:renderView,handleAction,input:inputChange,reset:clearPeriod,session};
+  return {open,onPeriodChange,reset,load,render:renderView,handleAction,input:inputChange,session};
 }});
