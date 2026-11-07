@@ -151,7 +151,13 @@
     else if(a==='set-proc'){state.proceso=id;state.requisito='todos';go('documentos');}
     else if(a==='req-pick'){state.selectedReq=id;go('requisitos');}
     else if(a==='filter-req-docs'){state.proceso='todos';state.requisito=id;go('documentos');}
-    else if(a==='select-period'){antiplagioUI.reset();state.periodId=id;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');}
+    else if(a==='select-period'){
+      const onAntiplagio=state.view==='antiplagio',changed=state.periodId!==id;
+      state.periodId=id;state.proceso='todos';state.requisito='todos';
+      if(onAntiplagio && changed)antiplagioUI.onPeriodChange();
+      else{antiplagioUI.reset();go('inicio');}
+      showToast('Período actualizado');
+    }
     else if(a==='new-doc')newDocument(id);
     else if(a==='edit-doc'){const d=state.documents.find(x=>x.id===id);if(d){state.draft=INST.normalize({...d},typeById(d.tipoId));go('editor');}}
     else if(a==='save-doc')saveEditor();
@@ -176,7 +182,14 @@
       if(!r?.canceled)showToast('PDF de maqueta exportado. No es un documento aprobado.');
     }catch(err){showToast('No fue posible exportar el PDF: '+(err?.message||'Error'));}
   }
-  $('period-select').addEventListener('change', e => {antiplagioUI.reset();state.periodId=e.target.value;state.draft=null;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');});
+  $('period-select').addEventListener('change', e => {
+    const next=e.target.value,changed=state.periodId!==next,onAntiplagio=state.view==='antiplagio';
+    if(!changed)return;
+    state.periodId=next;state.draft=null;state.proceso='todos';state.requisito='todos';
+    if(onAntiplagio)antiplagioUI.onPeriodChange();
+    else{antiplagioUI.reset();go('inicio');}
+    showToast('Período actualizado');
+  });
   document.addEventListener('click',handleClick);
   $('app-content').addEventListener('change',e=>{
     recordsUI.input(e);
