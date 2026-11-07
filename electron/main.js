@@ -7,6 +7,7 @@ const Excel = require('./excel.js');
 const Firebase = require('./firebase-read.js');
 const Memo = require('./memo-numbering.js');
 const AntiplagioStore = require('./antiplagio-store.js');
+const AntiplagioLocal = require('./antiplagio-local.js');
 const JSZip = require('jszip');
 
 
@@ -149,6 +150,40 @@ async function exportAntiplagio(event,spec){
  }
 }
 
+
+const periodSyncs=new Map();
+const localDir=()=>app.getPath('userData');
+async function refreshAntiplagioPeriod(periodoId){
+ if(!AntiplagioLocal.validPeriod(periodoId))throw Error('Período académico inválido.');
+ if(periodSyncs.has(periodoId))return periodSyncs.get(periodoId);
+ const job=(async()=>{
+   // Primero descargar y validar todos los registros; la copia local no se borra
+   // si falla la red, si Firebase devuelve un lote inválido o si falta conexión.
+   const studentData=await Firebase.loadStudents(periodoId);
+   if(studentData?.periodoId!==periodoId||!Array.isArray(studentData.students))throw Error('Respuesta de matrícula incoherente.');
+   let memos=null,warning='';
+   try{memos=await AntiplagioStore.list(periodoId);}
+   catch(e){warning='Los memorandos no se pudieron consultar en Firebase; se conservaron los datos locales: '+String(e.message||e).slice(0,180);}
+   await AntiplagioLocal.replaceFromFirebase(localDir(),periodoId,studentData.students,memos,studentData.readAt);
+   return {...await AntiplagioLocal.snapshot(localDir(),periodoId),source:'Firebase → SQLite',warning};
+ })();
+ periodSyncs.set(periodoId,job);
+ try{return await job;}finally{periodSyncs.delete(periodoId);}
+}
+async function openAntiplagioPeriod(periodoId){
+ const local=await AntiplagioLocal.snapshot(localDir(),periodoId);
+ if(local.hasCache)return {...local,source:'SQLite local'};
+ return refreshAntiplagioPeriod(periodoId);
+}
+async function saveAntiplagioRecord(record){
+ // Guardar primero en SQLite. Si la red falla, queda como pendiente local;
+ // nunca se asigna un folio provisional con apariencia institucional.
+ await AntiplagioLocal.saveDraft(localDir(),record);
+ const official=await AntiplagioStore.save(record);
+ await AntiplagioLocal.markSynced(localDir(),{...record,...official});
+ return official;
+}
+
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);
   ipcMain.handle('utet:save-pdf',savePDF);
@@ -156,8 +191,11 @@ app.whenReady().then(()=>{
     verifySender(event);
     return Memo.next(app.getPath('userData'),date);
   });
-  ipcMain.handle('utet:antiplagio-list',(event,periodoId)=>{verifySender(event);return AntiplagioStore.list(periodoId);});
-  ipcMain.handle('utet:antiplagio-save',(event,record)=>{verifySender(event);return AntiplagioStore.save(record);});
+  ipcMain.handle('utet:antiplagio-open',(event,periodoId)=>{verifySender(event);return openAntiplagioPeriod(periodoId);});
+  ipcMain.handle('utet:antiplagio-refresh',(event,periodoId)=>{verifySender(event);return refreshAntiplagioPeriod(periodoId);});
+  ipcMain.handle('utet:antiplagio-draft',(event,record)=>{verifySender(event);return AntiplagioLocal.saveDraft(localDir(),record);});
+  ipcMain.handle('utet:antiplagio-list',async(event,periodoId)=>{verifySender(event);return (await AntiplagioLocal.snapshot(localDir(),periodoId)).records;});
+  ipcMain.handle('utet:antiplagio-save',(event,record)=>{verifySender(event);return saveAntiplagioRecord(record);});
   ipcMain.handle('utet:antiplagio-export',exportAntiplagio);
   ipcMain.handle('utet:firebase-students',(event,periodoId)=>{verifySender(event);return Firebase.loadStudents(periodoId);});
   ipcMain.handle('utet:firebase-status',(event)=>{verifySender(event);return Firebase.status();});
