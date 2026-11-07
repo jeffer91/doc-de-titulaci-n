@@ -5,6 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const Excel = require('./excel.js');
 const Firebase = require('./firebase-read.js');
+const Memo = require('./memo-numbering.js');
 
 const ROOT = path.join(__dirname, '..');
 const RENDERER = path.join(ROOT, 'renderer');
@@ -61,6 +62,11 @@ async function savePDF(event, input) {
     filters:[{name:'Archivo PDF',extensions:['pdf']}]
   });
   if(canceled || !filePath) return { canceled: true };
+  const isMemo = input.kind === 'antiplagio';
+  if(isMemo){
+    if(!Memo.dateValid(input.memoDate) || !input.html.includes(Memo.CODE_PLACEHOLDER))
+      throw new Error('Falta la fecha válida o la referencia reservada del memorando.');
+  }
   const printer = new BrowserWindow({
     show:false,
     webPreferences:{sandbox:true,nodeIntegration:false,contextIsolation:true,
@@ -70,7 +76,12 @@ async function savePDF(event, input) {
   // Archivo temporal privado, sin scripts y eliminado siempre al finalizar.
   let temporaryDirectory = null;
   try {
-    const html = await createPrintHTML(input.html);
+    // Se reserva después de confirmar el diálogo de guardado.
+    // Una cancelación no consume número. Una falla posterior conserva el
+    // correlativo reservado para evitar volver a emitirlo por accidente.
+    const memo = isMemo ? await Memo.reserve(app.getPath('userData'),input.memoDate) : null;
+    const source = memo ? input.html.replaceAll(Memo.CODE_PLACEHOLDER,memo.code) : input.html;
+    const html = await createPrintHTML(source);
     temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(),'utet-pdf-'));
     const temporaryFile = path.join(temporaryDirectory,'impresion.html');
     await fs.writeFile(temporaryFile,html,{encoding:'utf8',mode:0o600});
@@ -80,7 +91,7 @@ async function savePDF(event, input) {
       margins:{marginType:'none'},displayHeaderFooter:false
     });
     await fs.writeFile(filePath,pdf);
-    return { canceled:false,filePath };
+    return { canceled:false,filePath, ...(memo?{memoCode:memo.code,memoNumber:memo.number}: {}) };
   }finally{
     if(!printer.isDestroyed())printer.destroy();
     if(temporaryDirectory) await fs.rm(temporaryDirectory,{recursive:true,force:true});
@@ -90,6 +101,10 @@ async function savePDF(event, input) {
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);
   ipcMain.handle('utet:save-pdf',savePDF);
+  ipcMain.handle('utet:memo-next',(event,date)=>{
+    verifySender(event);
+    return Memo.next(app.getPath('userData'),date);
+  });
   ipcMain.handle('utet:firebase-students',(event,periodoId)=>{verifySender(event);return Firebase.loadStudents(periodoId);});
   ipcMain.handle('utet:firebase-login',(event,credentials)=>{verifySender(event);return Firebase.signIn(credentials?.email,credentials?.password);});
   ipcMain.handle('utet:firebase-logout',(event)=>{verifySender(event);return Firebase.signOut();});
