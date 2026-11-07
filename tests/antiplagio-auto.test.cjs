@@ -4,13 +4,13 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'../renderer'),elements=new Map(),listeners=new Map(),pending=[];
 const node=id=>({id,value:'',innerHTML:'',textContent:'',classList:{add(){},remove(){}},addEventListener(a,fn){listeners.set(id+':'+a,fn);}});
 const document={getElementById(id){if(!elements.has(id))elements.set(id,node(id));return elements.get(id);},addEventListener(a,fn){listeners.set('document:'+a,fn);}};
-const saved=new Map(),calls={save:0,export:0,draft:0,modes:[]};
+const saved=new Map(),calls={save:0,export:0,draft:0,modes:[],pdfs:[]};
 const window={scrollY:0,scrollTo(x,y){this.scrollY=y;},utetDesktop:{
- openAntiplagioPeriod(p){return new Promise((resolve,reject)=>pending.push({method:'local',p,resolve,reject}));},
- refreshAntiplagioPeriod(p){return new Promise((resolve,reject)=>pending.push({method:'firebase',p,resolve,reject}));},
+ openAntiplagioPeriod(p,tipo){return new Promise((resolve,reject)=>pending.push({method:'local',p,tipo,resolve,reject}));},
+ refreshAntiplagioPeriod(p,tipo){return new Promise((resolve,reject)=>pending.push({method:'firebase',p,tipo,resolve,reject}));},
  async saveAntiplagioDraft(){calls.draft++;},
  async saveAntiplagioRecord(){calls.save++;throw Error('No se debería escribir en Firebase para descargar un documento sin cambios.');},
- async exportAntiplagioFiles(spec){calls.export++;calls.modes.push(spec.mode);return {canceled:false,count:spec.files.length,location:'/local/Descargas'};}
+ async exportAntiplagioFiles(spec){calls.export++;calls.modes.push(spec.mode);calls.pdfs.push(spec.files[0]?.html||'');return {canceled:false,count:spec.files.length,location:'/local/Descargas'};}
 }};
 const ctx=vm.createContext({window,document,Date,Math,Promise,console,
  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},setTimeout:()=>1,clearTimeout:()=>{}});
@@ -68,5 +68,31 @@ const packet=(p,students,records=[])=>({periodoId:p,students,records,hasCache:tr
  await tick();await tick();
  assert.match(display(),/Nuevo Período/,'Un error de red NO vacía los estudiantes locales');
  assert.match(display(),/Sin internet/);
+ // PRO-57: la misma pantalla se abre desde el segundo proceso, con otro espacio
+ // de memorandos y el mismo formato; no se mezclan registros.
+ click('rec-open','plagio-articulo');
+ assert.equal(pending.length,5);
+ assert.equal(pending[4].tipo,'articulo');
+ const articleMemo={...mem(two),...row(two,'0202020202','Nuevo Período'),
+   tipoDocumento:'articulo',folio:'02 MEM-ITSQMET-UTET-2026-04-15',
+   referencia:'UTET-ANT-2026-04-0002'};
+ pending[4].resolve(packet(two,[row(two,'0202020202','Nuevo Período')],[articleMemo]));
+ await tick();await tick();
+ assert.match(display(),/Artículo Académico · PRO-57/);
+ click('ap-add','0202020202');
+ click('ap-one','0202020202');
+ await tick();await tick();
+ assert.equal(calls.save,0,'La reimpresión del artículo no debe llamar Firebase');
+ assert.match(calls.pdfs.at(-1),/RESULTADO DEL ANÁLISIS DE SIMILITUD DEL ARTÍCULO ACADÉMICO/);
+ assert.match(calls.pdfs.at(-1),/su artículo académico, presentado durante el período académico/);
+ assert.doesNotMatch(calls.pdfs.at(-1),/su trabajo de titulación/);
+ click('rec-open','plagio-trabajo');
+ assert.equal(pending.length,6);
+ assert.equal(pending[5].tipo,'trabajo');
+ pending[5].resolve(packet(two,[row(two,'0202020202','Nuevo Período')],[]));
+ await tick();await tick();
+ assert.match(display(),/Trabajo de Titulación · PRO-164/);
+ assert.doesNotMatch(display(),/Memorando guardado/,'El memorando de artículo no debe aparecer como trabajo');
+
  console.log('OK UI SQLite: apertura y cambios locales, refresh manual y reimpresión sin escritura Firebase.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
