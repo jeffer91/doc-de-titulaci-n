@@ -2,6 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const os = require('node:os');
 const Excel = require('./excel.js');
 const Firebase = require('./firebase-read.js');
 
@@ -65,14 +66,15 @@ async function savePDF(event, input) {
     webPreferences:{sandbox:true,nodeIntegration:false,contextIsolation:true,
       javascript:false,webSecurity:true,images:true}
   });
+  // No usar data: URL: Chromium puede rechazar documentos largos con muchos estudiantes.
+  // Archivo temporal privado, sin scripts y eliminado siempre al finalizar.
+  let temporaryDirectory = null;
   try {
     const html = await createPrintHTML(input.html);
-    const ready = new Promise((resolve,reject)=>{
-      printer.webContents.once('did-finish-load',resolve);
-      printer.webContents.once('did-fail-load',(_,code,desc)=>reject(new Error(`Vista previa: ${desc} (${code})`)));
-    });
-    await printer.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(html));
-    await ready;
+    temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(),'utet-pdf-'));
+    const temporaryFile = path.join(temporaryDirectory,'impresion.html');
+    await fs.writeFile(temporaryFile,html,{encoding:'utf8',mode:0o600});
+    await printer.loadFile(temporaryFile);
     const pdf = await printer.webContents.printToPDF({
       printBackground:true,preferCSSPageSize:true,pageSize:'A4',
       margins:{marginType:'none'},displayHeaderFooter:false
@@ -81,6 +83,7 @@ async function savePDF(event, input) {
     return { canceled:false,filePath };
   }finally{
     if(!printer.isDestroyed())printer.destroy();
+    if(temporaryDirectory) await fs.rm(temporaryDirectory,{recursive:true,force:true});
   }
 }
 
