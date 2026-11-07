@@ -62,6 +62,17 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
   await Local.markSynced(dir,{...artSnap.records[0],similitud:'9.25'});
   assert.equal((await Local.snapshot(dir,PERIOD,'articulo')).records[0].syncStatus,'sincronizado');
 
+
+  // Actas AA: persistencia independiente dentro de SQLite.
+  const aa={periodoId:PERIOD,cedula:CEDULA,numeroActa:'AA-2026-0102-05-0001',
+    codigoDocumento:'AT-ITSQMET-UTET-2026-05',fechaEmision:'2026-05-29'};
+  await Local.saveActa(dir,aa);
+  assert.equal((await Local.getActa(dir,PERIOD,CEDULA)).numeroActa,aa.numeroActa);
+  assert.equal((await Local.loadActas(dir,PERIOD)).length,1);
+  await Local.saveActaEvidence(dir,PERIOD,CEDULA,{eligible:false,missing:['Inglés: PENDIENTE']});
+  assert.equal((await Local.getActaEvidence(dir,PERIOD,CEDULA)).eligible,false);
+  assert.equal((await Local.listActaEvidences(dir,PERIOD)).length,1);
+  await assert.rejects(()=>Local.saveActa(dir,{...aa,numeroActa:'AA-2026-0102-05-0002'}),/otro número/);
   const filename=path.join(dir,'UTET',Local.NAME);
   assert.equal((await fs.readFile(filename)).subarray(0,15).toString('utf8'),'SQLite format 3');
   await Local.saveDraft(dir,{...snap.records[0],similitud:'13.50'});
@@ -95,6 +106,7 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
   const reloaded=await Reopened.snapshot(dir,PERIOD);
   assert.equal(reloaded.hasCache,true);
   assert.equal(reloaded.records.length,1);
+  assert.equal((await Reopened.getActa(dir,PERIOD,CEDULA)).numeroActa,aa.numeroActa,'El folio AA no se pierde al reiniciar');
   assert.equal((await Reopened.snapshot(dir,PERIOD,'articulo')).records[0].folio,articulo.folio,'El artículo también sobrevive el reinicio');
   assert.equal(reloaded.syncedAt!==null,true);
   console.log('OK SQLite: primera carga, búsqueda local, reemplazo atómico, borradores y persistencia entre sesiones.');
