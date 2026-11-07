@@ -123,7 +123,7 @@
   function render() {
     $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button type="button" class="nav-button ${state.view===id||((state.view==='editor'||state.view==='records')&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-text">${escape(title)}</span></button>`).join('');
     $('period-select').innerHTML=DATA.periodos.map(p=>`<option value="${escape(p.id)}" ${p.id===state.periodId?'selected':''}>${escape(p.label)}</option>`).join('');
-    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,records:()=>recordsUI.render(),editor:renderEditor};
+    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,records:()=>recordsUI.render(),antiplagio:()=>antiplagioUI.render(),editor:renderEditor};
     $('app-content').innerHTML=(contents[state.view]||renderInicio)();
     window.scrollTo(0,0);
   }
@@ -141,6 +141,7 @@
     const target=event.target.closest('button[data-action], button[data-nav]');if(!target)return;
     if(target.dataset.nav){state.proceso='todos';go(target.dataset.nav);return;}
     const a=target.dataset.action,id=target.dataset.id;
+    if(antiplagioUI.handleAction(a,id))return;
     if(recordsUI.handleAction(a,id))return;
     if(a==='go-documents'){state.proceso='todos';state.requisito='todos';go('documentos');}
     else if(a==='go-requirements')go('requisitos');
@@ -150,7 +151,7 @@
     else if(a==='set-proc'){state.proceso=id;state.requisito='todos';go('documentos');}
     else if(a==='req-pick'){state.selectedReq=id;go('requisitos');}
     else if(a==='filter-req-docs'){state.proceso='todos';state.requisito=id;go('documentos');}
-    else if(a==='select-period'){state.periodId=id;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');}
+    else if(a==='select-period'){antiplagioUI.reset();state.periodId=id;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');}
     else if(a==='new-doc')newDocument(id);
     else if(a==='edit-doc'){const d=state.documents.find(x=>x.id===id);if(d){state.draft=INST.normalize({...d},typeById(d.tipoId));go('editor');}}
     else if(a==='save-doc')saveEditor();
@@ -175,20 +176,23 @@
       if(!r?.canceled)showToast('PDF de maqueta exportado. No es un documento aprobado.');
     }catch(err){showToast('No fue posible exportar el PDF: '+(err?.message||'Error'));}
   }
-  $('period-select').addEventListener('change', e => {state.periodId=e.target.value;state.draft=null;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');});
+  $('period-select').addEventListener('change', e => {antiplagioUI.reset();state.periodId=e.target.value;state.draft=null;state.proceso='todos';state.requisito='todos';go('inicio');showToast('Período actualizado');});
   document.addEventListener('click',handleClick);
   $('app-content').addEventListener('change',e=>{
     recordsUI.input(e);
+    antiplagioUI.input(e);
     if(e.target.id==='filter-process'){state.proceso=e.target.value;render();}
     if(e.target.id==='filter-requirement'){state.requisito=e.target.value;render();}
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
   });
   $('app-content').addEventListener('input',e=>{
     recordsUI.input(e);
+    antiplagioUI.input(e);
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
   });
   $('app-content').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='rec-search'){e.preventDefault();recordsUI.handleAction('rec-search');}if(e.key==='Enter'&&e.target.id==='doc-search'){e.preventDefault();state.search=e.target.value.trim();render();}if(e.key==='Enter'&&e.target.id==='career-search'){e.preventDefault();state.carreraSearch=e.target.value.trim();render();}});
   function refreshPreview(){const el=$('print-preview');if(el&&state.draft)el.innerHTML=previewHTML(state.draft);const v=$('institutional-validation');if(v&&state.draft)v.innerHTML=validationHTML(state.draft,typeById(state.draft.tipoId));}
   const recordsUI=window.UTET_RECORD_UI.create({data:DATA,records:window.UTET_RECORDS,state,period,getType:typeById,go,render,draftDefault,showToast,logAction});
+  const antiplagioUI=window.UTET_ANTIPLAGIO.create({state,period,go,render,showToast});
   render();
 })();
