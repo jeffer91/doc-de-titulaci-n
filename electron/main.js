@@ -46,14 +46,17 @@ function verifySender(event) {
 }
 
 async function createPrintHTML(documentMarkup) {
-  const [css, extraCss, asset] = await Promise.all([
+  const [css, extraCss, asset, memoFooterSVG] = await Promise.all([
     fs.readFile(path.join(RENDERER,'institutional.css'),'utf8'),
     fs.readFile(path.join(RENDERER,'antiplagio.css'),'utf8'),
-    fs.readFile(path.join(RENDERER,'assets','logo-itsqmet.png'))
+    fs.readFile(path.join(RENDERER,'assets','logo-itsqmet.png')),
+    fs.readFile(path.join(RENDERER,'assets','memorando-pie-itsqmet.svg'),'utf8')
   ]);
   const logoURL = `data:image/png;base64,${asset.toString('base64')}`;
   // La única imagen interna empleada por el motor de portadas se convierte a data:.
-  const markup = documentMarkup.replaceAll('src="assets/logo-itsqmet.png"',`src="${logoURL}"`);
+  const memoFooterURL = `data:image/svg+xml;base64,${Buffer.from(memoFooterSVG,'utf8').toString('base64')}`;
+  const markup = documentMarkup.replaceAll('src="assets/logo-itsqmet.png"',`src="${logoURL}"`)
+    .replaceAll('src="assets/memorando-pie-itsqmet.svg"',`src="${memoFooterURL}"`);
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:white}*{box-sizing:border-box}</style><style>${css}</style><style>${extraCss}</style></head><body>${markup}</body></html>`;
 }
 

@@ -17,6 +17,7 @@ const meta={codigo:'01 MEM-ITSQMET-UTET-2026-11-07',destinatario:'Autoridad de e
 const label='Abril 2026 a Septiembre 2026';
 const careers=['CONTABILIDAD','ADMINISTRACIÓN','ENFERMERÍA','DESARROLLO DE SOFTWARE'];
 const logo=fs.readFileSync(path.join(renderer,'assets','logo-itsqmet.png')).toString('base64');
+const footerSVG=fs.readFileSync(path.join(renderer,'assets','memorando-pie-itsqmet.svg')).toString('base64');
 const styles=fs.readFileSync(path.join(renderer,'institutional.css'),'utf8')+
   fs.readFileSync(path.join(renderer,'antiplagio.css'),'utf8');
 function students(count){
@@ -33,7 +34,8 @@ function students(count){
 function documentFor(count){
   const demo=students(count);
   const html=(count===1?M.individualHTML({...demo[0],...M.example(demo[0].estudianteId),folio:meta.codigo,fecha:meta.fecha,referencia:'UTET-ANT-2026-11-0001'},meta,label):M.renderPDF(meta,demo,label)).replaceAll('src="assets/logo-itsqmet.png"',
-    'src="data:image/png;base64,'+logo+'"');
+    'src="data:image/png;base64,'+logo+'"').replaceAll('src="assets/memorando-pie-itsqmet.svg"',
+    'src="data:image/svg+xml;base64,'+footerSVG+'"');
   const pages=(html.match(/class="inst-page ap-page/g)||[]).length;
   const src='<!doctype html><html lang="es"><head><meta charset="utf-8">'+
     '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:">'+

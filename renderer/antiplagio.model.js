@@ -304,60 +304,68 @@
     if(n>0&&!Object.values(sources).includes('detected'))sources.google='detected';
     return {similitud:n.toFixed(2),fuentes:sources,origen:'simulado'};
   }
+  // La primera hoja replica la disposición del memorando institucional en Word.
+  // Las tarjetas y gráficos comienzan únicamente en el anexo (segunda hoja).
   function individualHTML(row,meta,period){
     const n=number(row.similitud),ok=n!==null&&n<20;
     const norm=normalizeCareer(row.carreraNombre,row.modalidad),sourceFlags=row.fuentes||{};
     const values=SOURCE_TYPES.map(x=>({key:x.key,label:x.label,active:sourceFlags[x.key]==='detected',state:sourceFlags[x.key]||'unknown'}));
-    const ratio=n===null?0:n;
-    const display=pformat(row.similitud);
+    const ratio=n===null?0:n,display=pformat(row.similitud);
     const result=n===null?'SIN RESULTADO':ok?'APROBADO':'NO APROBADO';
     const conclusion=n===null?'No se dispone de un resultado para emitir una conclusión.':
-       ok?'El índice registrado se encuentra por debajo del límite del 20 % establecido para este proceso. En consecuencia, cumple el criterio de similitud aplicado.':
-       'El índice registrado alcanza o supera el 20 % establecido para este proceso. El trabajo no cumple el criterio de similitud aplicado; corresponde realizar las correcciones pertinentes y presentar nuevamente el trabajo para un nuevo análisis, sin plazo especificado.';
+      ok?'El índice registrado es inferior al 20 %, por lo que el trabajo cumple el criterio de similitud establecido.':
+      'El índice registrado es igual o superior al 20 %, por lo que el trabajo NO APROBADO requiere corregir las coincidencias identificadas y presentar nuevamente el trabajo para un nuevo análisis.';
     const demo=row.origen==='simulado';
-    const folio=t(row.folio)||t(meta.codigo);
-    const fecha=t(row.fecha)||t(meta.fecha);
+    const folio=t(row.folio)||t(meta.codigo),fecha=t(row.fecha)||t(meta.fecha);
     const reference=t(row.referencia)||'Pendiente';
     const dataRow=(k,v)=>'<div class="ap-detail"><span>'+E(k)+'</span><strong>'+E(v||'No registrado')+'</strong></div>';
-    const header=()=>'<header class="ap-memo-header"><img src="assets/logo-itsqmet.png" alt="ITSQMET"><span>UNIDAD DE TITULACIÓN Y EFICIENCIA TERMINAL</span></header>';
-    const signature='<div class="ap-signature"><p>Atentamente,</p><div class="ap-sign-space"></div><strong>MSc. Jefferson Edgar Villarreal Enríquez</strong><span>COORDINADOR DE TITULACIÓN</span></div>';
-    const footer=i=>'<footer class="ap-footer"><span>ITSQMET · UTET · Notificación individual de similitud</span><span>Página '+i+' de 2</span></footer>';
-    const demonstration=demo?'<p class="ap-demo-label">DATOS ILUSTRATIVOS · NO CONSTITUYEN UN ANÁLISIS REAL</p>':'';
-    const first='<section class="inst-page ap-page ap-personal-page">'+header()+
-      '<h1 class="ap-memo-title">No. '+E(folio)+'</h1>'+
-      '<table class="ap-memo-fields"><tbody>'+
-      '<tr><th>PARA</th><td>'+E(row.nombres)+'<br>Estudiante</td></tr>'+
-      '<tr><th>DE</th><td>MSc. Jefferson Edgar Villarreal Enríquez<br>Coordinador de Titulación</td></tr>'+
-      '<tr><th>ASUNTO</th><td>Notificación del resultado de similitud del trabajo de titulación</td></tr>'+
-      '<tr><th>FECHA</th><td>'+E(day(fecha))+'</td></tr></tbody></table>'+
-      '<p class="ap-intro">De mi consideración: Por medio del presente, se comunica el resultado del análisis de similitud correspondiente a su trabajo de titulación.</p>'+
-      demonstration+
+    const logo=()=>'<div class="ap-word-logo"><img src="assets/logo-itsqmet.png" alt="Logotipo institucional ITSQMET"></div>';
+    const footer=()=>'<div class="ap-word-footer"><img src="assets/memorando-pie-itsqmet.svg" alt="Pie institucional ITSQMET"></div>';
+    const disclosure=demo?'<p class="ap-word-demonstration">DATOS ILUSTRATIVOS · NO CONSTITUYEN UN ANÁLISIS REAL</p>':'';
+    const field=(label,value,cls='')=>'<div class="ap-word-field '+cls+'"><strong>'+E(label)+'</strong><b>:</b><span>'+value+'</span></div>';
+    const bodyNote=ok?
+      'En virtud de que el porcentaje registrado es inferior al 20 %, se comunica que su trabajo <strong>APROBADO</strong> cumple el criterio de similitud aplicable al proceso de titulación.':
+      'Dado que el porcentaje registrado alcanza o supera el 20 %, se comunica que su trabajo <strong>NO APROBADO</strong> debe ser corregido y presentado nuevamente para un nuevo análisis, sin establecer un plazo en este memorando.';
+    const first='<section class="inst-page ap-page ap-word-memorandum">'+logo()+
+      '<h1 class="ap-word-title">Memorando No. <span class="ap-word-code">'+E(folio)+'</span></h1>'+
+      '<div class="ap-word-fields">'+
+        field('PARA',E(row.nombres)+'<small>ESTUDIANTE</small>','ap-word-field-para')+
+        field('DE','MSc. Jefferson Edgar Villarreal Enríquez<br><strong>COORDINADOR DE TITULACIÓN</strong>','ap-word-field-de')+
+        field('ASUNTO','NOTIFICACIÓN DEL RESULTADO DE SIMILITUD DEL TRABAJO DE TITULACIÓN','ap-word-field-asunto')+
+        field('FECHA',E(day(fecha)),'ap-word-field-fecha')+
+      '</div>'+
+      '<div class="ap-word-body">'+
+        '<p class="ap-word-salutation">De mi consideración:</p>'+
+        '<p>Por medio del presente, me dirijo a usted para comunicar el resultado del análisis de similitud de su trabajo de titulación, correspondiente al período académico <strong>'+E(period)+'</strong>.</p>'+
+        '<p>El porcentaje de similitud registrado es de <strong>'+E(display)+'</strong>. '+bodyNote+'</p>'+
+        '<p>El índice de similitud refleja coincidencias de contenido y no constituye, por sí solo, una determinación de plagio. El detalle académico, las fuentes consideradas y la referencia del reporte constan en el anexo que inicia en la segunda página.</p>'+
+        disclosure+
+      '</div>'+
+      '<div class="ap-word-signature"><p>Atentamente,</p><div class="ap-word-signature-space" aria-hidden="true"></div>'+
+        '<strong>MSc. Jefferson Edgar Villarreal Enríquez</strong><strong>COORDINADOR DE TITULACIÓN</strong></div>'+
+      footer()+'</section>';
+    const second='<section class="inst-page ap-page ap-personal-report ap-word-report">'+logo()+
+      '<h1>ANEXO · REPORTE INDIVIDUAL DE SIMILITUD</h1><p class="ap-subtitle">'+E(row.nombres)+' · '+E(reference)+'</p>'+disclosure+
       '<div class="ap-personal-card"><h2>1. Información académica</h2><div class="ap-personal-grid">'+
-      dataRow('Nombres y apellidos',row.nombres)+dataRow('Cédula',row.cedula)+dataRow('Carrera',norm.carrera)+
-      dataRow('Modalidad de estudios',norm.modalidad)+dataRow('Período académico',period)+
-      (row.sede?dataRow('Sede',row.sede):'')+(row.jornada?dataRow('Jornada',row.jornada):'')+
-      '</div></div>'+
-      '<div class="ap-personal-card"><h2>2. Resultado de similitud</h2><div class="ap-personal-score"><div><strong>'+E(display)+'</strong><span>Índice de similitud</span></div><div class="'+(ok?'ap-status-approved':'ap-status-rejected')+'">'+E(result)+'</div></div>'+
-      '<div class="ap-track"><span class="ap-fill" style="width:'+ratio+'%"></span></div><p class="ap-caption">Criterio aplicado: menor de 20 %.</p></div>'+
-      '<div class="ap-personal-card"><h2>3. Fuentes y referencia</h2><div class="ap-personal-grid">'+
-      dataRow('Herramienta','Sistema institucional de antiplagio')+
-      dataRow('Referencia del reporte',reference)+dataRow('Fecha del reporte',day(fecha))+
-      dataRow('Categorías con coincidencias',String(values.filter(x=>x.active).length)+' de '+values.length)+
-      '</div></div>'+
-      '<div class="ap-conclusion"><strong>Conclusión</strong><p>'+E(conclusion)+'</p></div>'+signature+footer(1)+'</section>';
-    const second='<section class="inst-page ap-page ap-personal-report">'+header()+
-      '<h1>DETALLE INDIVIDUAL DE SIMILITUD</h1><p class="ap-subtitle">'+E(row.nombres)+' · '+E(reference)+'</p>'+demonstration+
-      '<h2>Indicadores generales</h2>'+
-      '<div class="ap-personal-score"><div><strong>'+E(display)+'</strong><span>Índice de similitud</span></div><div class="'+(ok?'ap-status-approved':'ap-status-rejected')+'">'+E(result)+'</div></div>'+
-      '<div class="ap-track ap-long-track"><span class="ap-fill" style="width:'+ratio+'%"></span></div>'+
-      '<div class="ap-personal-card"><h2>Distribución porcentual</h2>'+
-      '<div class="ap-share"><div class="ap-donut" style="--ap-value:'+ratio+'%"><span>'+E(display)+'</span></div>'+
-      '<p>Índice de similitud registrado sobre el total del trabajo analizado. El porcentaje no demuestra, por sí solo, plagio.</p></div></div>'+
-      '<h2>Fuentes consideradas</h2>'+
-      '<div class="ap-personal-sources">'+values.map(v=>'<div><span class="ap-src ap-src-'+v.key+' '+(v.active?'ap-src-on':'ap-src-off')+'">'+glyph(v.key)+'</span><strong>'+E(v.label)+'</strong><span>'+E(v.state==='detected'?'Coincidencia':v.state==='not-detected'?'Sin coincidencia':'Sin información')+'</span></div>').join('')+'</div>'+
-      '<p class="ap-caption">Las fuentes son indicadores de coincidencia, no porcentajes sumables. La clasificación académica se realiza según el índice general y el criterio institucional.</p>'+
-      '<div class="ap-personal-card"><h2>Identificación del análisis</h2><div class="ap-personal-grid">'+dataRow('Memorando',folio)+dataRow('Referencia',reference)+dataRow('Fecha',day(fecha))+dataRow('Condición',result)+'</div></div>'+
-      footer(2)+'</section>';
+        dataRow('Nombres y apellidos',row.nombres)+dataRow('Cédula',row.cedula)+
+        dataRow('Carrera',norm.carrera)+dataRow('Modalidad de estudios',norm.modalidad)+
+        dataRow('Período académico',period)+(row.sede?dataRow('Sede',row.sede):'')+
+        (row.jornada?dataRow('Jornada',row.jornada):'')+'</div></div>'+
+      '<div class="ap-personal-card"><h2>2. Resultado de similitud</h2>'+
+        '<div class="ap-personal-score"><div><strong>'+E(display)+'</strong><span>Índice de similitud</span></div>'+
+        '<div class="'+(ok?'ap-status-approved':'ap-status-rejected')+'">'+E(result)+'</div></div>'+
+        '<div class="ap-track ap-long-track"><span class="ap-fill" style="width:'+ratio+'%"></span></div>'+
+        '<p class="ap-caption">Criterio aplicado: menor de 20 %. La similitud no determina por sí sola plagio.</p>'+
+        '<div class="ap-share"><div class="ap-donut" style="--ap-value:'+ratio+'%"><span>'+E(display)+'</span></div>'+
+        '<p>Distribución general del índice de similitud frente al contenido del trabajo analizado.</p></div></div>'+
+      '<div class="ap-personal-card"><h2>3. Fuentes consideradas</h2>'+
+        '<div class="ap-personal-sources">'+values.map(v=>'<div><span class="ap-src ap-src-'+v.key+' '+(v.active?'ap-src-on':'ap-src-off')+'">'+glyph(v.key)+'</span><strong>'+E(v.label)+'</strong><span>'+E(v.state==='detected'?'Coincidencia':v.state==='not-detected'?'Sin coincidencia':'Sin información')+'</span></div>').join('')+'</div>'+
+        '<p class="ap-caption">Los indicadores de fuentes no representan porcentajes sumables.</p></div>'+
+      '<div class="ap-personal-card ap-word-reference"><h2>Identificación del análisis</h2><div class="ap-personal-grid">'+
+        dataRow('Memorando',folio)+dataRow('Referencia',reference)+
+        dataRow('Fecha',day(fecha))+dataRow('Condición',result)+'</div></div>'+
+      '<div class="ap-conclusion"><strong>Conclusión</strong><p>'+E(conclusion)+'</p></div>'+
+      footer()+'</section>';
     return '<div class="institutional-document inst-antiplagio">'+first+second+'</div>';
   }
 

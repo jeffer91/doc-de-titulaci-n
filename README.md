@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.7.2)
+# Doc de Titulación · UTET (Electron v0.7.3)
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
@@ -32,7 +32,7 @@ Cada estudiante seleccionado recibe un memorando distinto; **ya no se emite un c
 - **SQLite es la fuente principal de Antiplagio.** Solo en la primera apertura de un período aún no descargado se consulta Firebase (`utet-4387a`: `matriculas` + `Estudiante`). Después, volver a abrir la aplicación, buscar y cambiar a períodos ya cargados utiliza la base local. El buscador funciona por nombre y cédula, con filtro de carrera.
 - Los datos académicos que existan incluyen cédula, nombres, carrera, modalidad de estudios, sede y jornada. «Online» se elimina de la presentación de la carrera y se interpreta como modalidad «En línea» cuando Firebase no proporciona otra modalidad; nunca cambia el dato académico almacenado.
 - El documento individual se dirige al estudiante, desde MSc. Jefferson Edgar Villarreal Enríquez (Coordinador de Titulación), con el asunto «Notificación del resultado de similitud del trabajo de titulación».
-- Cada PDF tiene dos páginas: memorando con tres tarjetas (información académica; resultado; fuentes y referencia), conclusión y espacio de firma; segunda página con gráficos e indicadores de las fuentes.
+- Cada PDF tiene dos páginas. **La primera respeta la plantilla Word «Memorando No. MEM-ITSQMET-UXXX-20XX-0X-0X-XXX(5)»:** logotipo oficial, título centrado, campos PARA/DE/ASUNTO/FECHA con dos puntos, texto en negro y rojo, párrafos justificados, firma de la Coordinación y pie institucional. **Las tarjetas y gráficos solo aparecen desde la segunda página** como anexo individual. Se preserva la identificación de simulaciones, sin atribuirlas a análisis reales.
 - Siete tipos de fuente: Google, sitios web, repositorios académicos, publicaciones, documentos, trabajos académicos y repositorio institucional ITSQMET.
 - El resultado se clasifica conforme al criterio configurado para este proceso: **menor de 20 %** en rango; **20 % o superior** requiere corrección y una nueva presentación, sin plazo automático. Un índice de similitud no constituye por sí solo evidencia de plagio.
 - La fecha determinista de presentación es el **día 15 del mes siguiente al cierre del período**, trasladada al lunes siguiente si coincide con sábado o domingo. No contempla otros feriados nacionales. La fecha de memorando y del reporte es la misma y permanece constante al corregir.
@@ -95,7 +95,8 @@ GitHub Actions ejecuta además pruebas de impresión real en Chromium/Electron, 
 - `electron/preload.js`: puente seguro desde la interfaz.
 - `renderer/antiplagio.js`: lectura local, búsqueda sin red, actualización Firebase manual, selección, borradores y descargas.
 - `renderer/antiplagio.model.js`: validación, fuentes, fechas, formato de memorando individual y gráficos.
-- `renderer/antiplagio.css`: interfaz compacta y documento A4.
+- `renderer/antiplagio.css`: interfaz compacta y formato A4 de la plantilla institucional en primera hoja.
+- `renderer/assets/memorando-pie-itsqmet.svg`: reproducción vectorial del pie institucional que figura en el Word de referencia; el logo con sello original proviene de `renderer/assets/logo-itsqmet.png`.
 - `electron/memo-numbering.js`: numerador **local anterior**, conservado solo por compatibilidad del exportador histórico; el nuevo flujo individual utiliza el contador de Firebase.
 - `renderer/records.js`, `renderer/records-ui.js`, `electron/excel.js`: formularios y Excel de los otros tipos documentales.
 

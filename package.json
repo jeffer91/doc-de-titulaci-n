@@ -1,6 +1,6 @@
 {
   "name": "doc-de-titulacion",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": true,
   "description": "UTET PRO-164: SQLite local-first y Firebase bajo demanda",
   "main": "electron/main.js",
