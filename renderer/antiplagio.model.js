@@ -194,7 +194,14 @@
       bar('En rango operativo',data.inRange,max,data.inRange+' estudiantes')+
       bar('Fuera del rango',data.outRange,max,data.outRange+' estudiantes')+
       bar('Sin registro',data.missing,max,data.missing+' estudiantes')+
-      '</div>';
+      '</div>'+graphShare(data);
+  }
+  function graphShare(data){
+    if(!data.present)return '<p class="ap-caption">No se calcula proporción sin resultados registrados.</p>';
+    const ratio=(100*data.inRange/data.present),pct=ratio.toFixed(1);
+    return '<div class="ap-share"><div class="ap-donut" style="--ap-value:'+ratio.toFixed(2)+'%">'+
+      '<span>'+pct+' %</span></div><p><strong>Proporción dentro del rango operativo</strong><br>'+
+      data.inRange+' de '+data.present+' resultados registrados. Este indicador es descriptivo, no una declaración de aprobación.</p></div>';
   }
   function page(body,css=''){return {body,css};}
   function reportPage(body,meta,period,first){
