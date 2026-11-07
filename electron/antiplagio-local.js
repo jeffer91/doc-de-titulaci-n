@@ -5,7 +5,21 @@
  */
 const fs=require('node:fs/promises');
 const path=require('node:path');
-const initSqlJs=require('sql.js');
+// Cargar SQLite bajo demanda: una dependencia no instalada no debe impedir
+// abrir Inicio, Documentos u otras pantallas de la aplicación.
+let initSqlJs;
+function sqliteEngine(){
+ if(!initSqlJs){
+  try { initSqlJs=require('sql.js'); }
+  catch(error){
+   if(error?.code==='MODULE_NOT_FOUND' && /Cannot find module ['"]sql\.js['"]/.test(String(error.message))){
+    throw new Error('Falta instalar la base local SQLite (sql.js). En la carpeta de UTET ejecuta: npm install; después vuelve a abrir la aplicación.');
+   }
+   throw error;
+  }
+ }
+ return initSqlJs;
+}
 const NAME='utet-antiplagio.sqlite';
 const MAX_ROWS=5000;
 let instance=null;
@@ -30,7 +44,7 @@ function schema(db){
 async function open(baseDir){
  if(typeof baseDir!=='string'||!baseDir.trim())throw Error('Directorio local inválido.');
  if(instance?.baseDir===baseDir)return instance;
- const SQL=await initSqlJs({locateFile:file=>require.resolve('sql.js/dist/'+file)});
+ const SQL=await sqliteEngine()({locateFile:file=>require.resolve('sql.js/dist/'+file)});
  const folder=path.join(baseDir,'UTET');
  await fs.mkdir(folder,{recursive:true,mode:0o700});
  const filename=path.join(folder,NAME);
