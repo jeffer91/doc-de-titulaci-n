@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.5.0 · PRO-164 integrado)
+# Doc de Titulación · UTET (Electron v0.5.1 · PRO-164 integrado)
 
 Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
 
@@ -6,15 +6,15 @@ Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y 
 
 El documento **Porcentaje de Plagio** del proceso **PRO-164** dispone ahora de un flujo propio (independiente del editor genérico):
 1. Seleccionar uno de los seis períodos en la barra superior.
-2. Abrir **Procesos → PRO-164 → Porcentaje de Plagio → Datos**.
-3. Pulsar **Consultar estudiantes**. La app lee el proyecto Firebase `utet-4387a` en modo **solo lectura**, filtrando matrículas por período y cruzándolas con documentos `Estudiante`. Si las reglas de Firestore requieren sesión, iniciar sesión en el panel; la contraseña y el token solo permanecen en memoria del proceso.
-4. Buscar por nombre, apellido o cédula; añadir estudiantes individualmente o en bloque. Al volver a consultar se descarta la edición de esa sesión.
+2. Abrir **Procesos → PRO-164 → Porcentaje de Plagio → Datos**: la aplicación consulta **automáticamente** estudiantes del período activo en el proyecto Firebase `utet-4387a`, usando `matriculas` y `Estudiante` en modo **solo lectura**, sin pantalla de autenticación.
+3. El buscador filtra por nombre o cédula **mientras se escribe**; el filtro de carrera opera inmediatamente. Seleccionar individualmente o usar **Añadir filtrados**.
+4. Cambiar de período desde la barra superior recarga los estudiantes **sin salir de Antiplagio**. **Actualizar** permite forzar la consulta y requiere confirmar si se van a perder resultados editados.
 5. Registrar porcentaje real (0–100), fecha de reporte, referencia si está disponible, herramienta según la evidencia y confirmar cada valor. Configurar fuentes únicamente cuando su presencia/ausencia esté respaldada; **sin información** no equivale a «no detectada».
-6. Introducir destinatario, cargo, código institucional definitivo y fechas, revisar la vista previa A4 y exportar **un único PDF**.
+6. Introducir destinatario, cargo y fechas; el número de memorando es **automático**, revisar la vista previa A4 y exportar **un único PDF**.
 
 **Regla de emisión:** los porcentajes mayores de **19 %** se conservan sin alteración ni ocultamiento, pero bloquean la exportación mientras estén seleccionados. También bloquean la emisión los registros ausentes, sin fecha, sin confirmación o con identificación insuficiente. El 0 % válido no se trata como dato faltante. El memorando ocupa la primera página; las tablas comienzan en la segunda y los gráficos se basan exclusivamente en resultados reales.
 
-**Protección de datos:** esta nueva pantalla mantiene estudiantes, porcentajes y evidencia **solo en memoria**, sin guardarlos en `localStorage` ni escribirlos en Firebase. Los otros 23 documentos y sus tablas Excel siguen intactos. Cerrar la app o consultar de nuevo pierde el trabajo aún no emitido. La identidad y el acceso de lectura dependen de las reglas **realmente desplegadas** en Firebase, que deben verificarse en el entorno institucional; que la configuración exista en GitHub no concede permisos ni garantiza que el servidor sea accesible. Se recomienda activar autenticación y controles institucionales antes de tratar datos personales en producción. El PDF se genera sin firma y requiere firma legítima.
+**Protección de datos:** esta pantalla mantiene estudiantes, porcentajes y evidencia **solo en memoria**, sin guardarlos en `localStorage` ni escribirlos en Firebase. Los otros 23 documentos y sus tablas Excel siguen intactos. Cerrar la app o consultar de nuevo pierde el trabajo aún no emitido. La configuración web de Firebase es pública y **no autentica** a la persona que usa el programa. La consulta directa funciona **solo si las reglas realmente desplegadas permiten lectura sin sesión**; un rechazo 401/403 se muestra como error y jamás se omite. Las reglas de lectura pública de cédulas y nombres representan un riesgo de privacidad. Para producción institucional debe revisarse la política de acceso y desplegarse seguridad adecuada sin exigir necesariamente un formulario visible. El PDF se genera sin firma y requiere firma legítima.
 
 ## Numeración mensual de memorandos UTET
 
@@ -26,6 +26,15 @@ La salida de antiplagio utiliza la nomenclatura **`No. XX MEM-ITSQMET-UTET-AAAA-
 - La numeración se reinicia a `01` el primer día de cada mes nuevo; meses anteriores mantienen su secuencia.
 - El registro reside en `app.getPath('userData')/utet-memorandos-numeracion.json` (fuera del repositorio); no almacena estudiantes ni resultados. Una base dañada bloquea la emisión en lugar de volver automáticamente a `01`.
 - **Límite actual:** el contador es **local al equipo**, no institucional multiusuario. Si ya se emitieron memorandos en otro sistema o equipo, puede existir una colisión. Antes de declarar el correlativo oficial de toda UTET hace falta conciliar el histórico e implantar un contador central transaccional con autenticación y reglas vigentes en Firebase. No se han modificado las reglas de producción.
+
+## Interfaz compacta y conexión automática (v0.5.1)
+
+- Dos paneles: **Estudiantes y resultados**; **Memorando y PDF**. Se redujo el texto de ayuda visible.
+- Entrada directa al PRO-164 → consulta automática; no existe panel de correo/contraseña, y **Actualizar** reemplaza la consulta manual.
+- Búsqueda instantánea sin perder foco, filtro de carrera y selección múltiple.
+- Cambiar el período activo dentro del PRO-164 conserva la pantalla, descarta el conjunto anterior y consulta la nueva matrícula. Respuestas tardías de otro período se ignoran.
+- Si Firestore rechaza la consulta, se muestra el fallo y no se sustituyen estudiantes reales por datos ficticios.
+- Las pruebas específicas verifican ese flujo. La conexión **real** al entorno institucional depende de la red y las reglas desplegadas, no puede certificarse con pruebas simuladas.
 
 ## Arranque local
 
@@ -92,7 +101,7 @@ La app solo consulta Firebase para PRO-164 bajo demanda; no ejecuta escrituras y
 ## Estructura
 
 - `electron/main.js`: ventana Electron y exportación aislada de PDF.
-- `electron/firebase-read.js`: lector Firebase de matrículas y estudiantes, solo lectura; sesión opcional en memoria.
+- `electron/firebase-read.js`: lector Firebase de matrículas y estudiantes, solo lectura directa y sin formulario de sesión.
 - `electron/memo-numbering.js`: contador local de memorandos UTET, secuencial por mes de emisión y persistente.
 - `renderer/antiplagio.js`, `renderer/antiplagio.model.js`, `renderer/antiplagio.css`: selección, validación y PDF específico PRO-164.
 - `electron/preload.js`: puente IPC restringido.
