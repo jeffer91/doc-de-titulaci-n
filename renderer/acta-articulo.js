@@ -93,7 +93,7 @@ window.UTET_ACTA_ARTICULO=Object.freeze({create(ctx){
      '<td>'+esc(s.carreraNombre)+'</td><td>'+stateText(s)+'</td>'+
      '<td>'+button('aa-detail','Detalle',s.cedula)+
       (issued?button('aa-download','PDF',s.cedula,'primary'):
-       button('aa-verify','Verificar',s.cedula)+button('aa-issue','Emitir',s.cedula,approved(e)?'primary':''))+'</td></tr>'+
+       button('aa-verify','Verificar',s.cedula)+button('aa-recover','Recuperar',s.cedula)+button('aa-issue','Emitir',s.cedula,approved(e)?'primary':''))+'</td></tr>'+
      (session.detail===s.cedula?'<tr><td colspan="5">'+evidenceDetails(s.cedula)+'</td></tr>':'');
    }).join('')+'</tbody></table></div>'+
    (list.length>250?'<p class="aa-info">Mostrando 250 estudiantes. Refina la búsqueda para encontrar más registros.</p>':'')+
@@ -109,6 +109,16 @@ window.UTET_ACTA_ARTICULO=Object.freeze({create(ctx){
    session.evidences.set(cedula,e);session.detail=cedula;
    session.notice=e.eligible?'Cumple las condiciones registradas.':'Se identificaron '+e.missing.length+' condiciones pendientes.';
   }catch(error){session.error=String(error.message||error).slice(0,480);}
+  finally{session.busy=false;render();}
+ }
+ async function recover(cedula){
+  if(session.busy)return;
+  session.busy=true;session.error='';render();
+  try{
+   const item=await window.utetDesktop.recoverActaArticulo(state.periodId,cedula);
+   if(!item)session.notice='No existe un acta AA emitida en el registro central para este estudiante.';
+   else{session.actas.set(cedula,item);session.notice='Acta recuperada: '+item.numeroActa;session.detail=cedula;}
+  }catch(error){session.error=String(error.message||error).slice(0,490);}
   finally{session.busy=false;render();}
  }
  async function issue(cedula){
@@ -148,6 +158,7 @@ window.UTET_ACTA_ARTICULO=Object.freeze({create(ctx){
   else if(action==='aa-detail'){session.detail=session.detail===id?'':id;render();}
   else if(action==='aa-verify')verify(id);
   else if(action==='aa-issue')issue(id);
+  else if(action==='aa-recover')recover(id);
   else if(action==='aa-download')exportExisting([id],'pdfs');
   else if(action==='aa-zip')exportExisting([...session.selected],'zip');
   return true;
