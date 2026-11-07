@@ -80,6 +80,10 @@
 .ap-result-table th:nth-child(5){width:17%}.ap-result-table th:nth-child(6){width:18%}
 .ap-result-table .ap-number{font-weight:800;color:#274e74}
 .ap-chart{border:1px solid #edf1f6;padding:4mm 3mm;background:#fafbfd}
+.ap-share{display:flex;align-items:center;gap:7mm;padding:4mm 3mm;border:1px solid #e1e9f3;margin-top:3mm;font-size:8pt;min-height:33mm}
+.ap-share p{margin:0;line-height:1.5;max-width:105mm}
+.ap-donut{width:26mm;height:26mm;min-width:26mm;border-radius:50%;background:conic-gradient(#2b789e 0 var(--ap-value),#e0e8ef var(--ap-value) 100%);display:flex;align-items:center;justify-content:center}
+.ap-donut span{background:#fff;border-radius:50%;width:19mm;height:19mm;display:flex;align-items:center;justify-content:center;color:#2a4968;font-size:9pt;font-weight:800}
 .ap-bar-row{display:flex;align-items:center;gap:4mm;margin-bottom:4mm;font-size:8pt}
 .ap-bar-row:last-child{margin-bottom:0}
 .ap-bar-label{width:48mm;min-width:48mm;max-width:48mm;line-height:1.35;overflow-wrap:anywhere;font-weight:700;color:#344c65}
