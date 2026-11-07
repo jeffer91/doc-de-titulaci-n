@@ -112,3 +112,65 @@
   .ap-preview-scroll{padding:0;max-height:none;overflow:visible;background:#fff}
   .ap-preview-scroll .institutional-document{zoom:1}
 }
+
+
+/* PRO-164 · modo compacto (no afecta los estilos A4 del PDF) */
+.ap-compact{max-width:1450px;gap:10px}
+.ap-compact .ap-title{align-items:center}
+.ap-compact .ap-title h1{font-size:20px;line-height:1.2;margin:0}
+.ap-compact .ap-title h1 span{font-size:12px;color:#78879a;font-weight:500}
+.ap-compact .ap-panel{padding:12px 14px;border-radius:9px}
+.ap-compact .ap-panel h2{font-size:13px;margin:0;font-weight:700;color:#203b5b}
+.ap-compact .ap-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.ap-compact .ap-section-head h2 span{font-size:11px;color:#7a8799;font-weight:500}
+.ap-compact .ap-actions{gap:7px}
+.ap-compact .ap-connect{font-size:11px;color:#78879a;border:1px solid #d8e2ec;border-radius:20px;padding:4px 9px}
+.ap-compact .ap-connect.ready{color:#24704c;border-color:#b5ddc7;background:#eef9f3}
+.ap-compact .ap-connect.failed{color:#b34141;border-color:#eac6c6;background:#fff2f2}
+.ap-compact .ap-filterbar{display:grid;grid-template-columns:minmax(230px,1fr) minmax(150px,240px) auto;gap:7px;margin:7px 0 9px}
+.ap-compact .ap-filterbar input,.ap-compact .ap-filterbar select{min-width:0;width:100%;border:1px solid #cbd8e7;border-radius:7px;font-size:12px;padding:7px 9px;min-height:33px;background:#fff;color:#273d5b}
+.ap-compact .ap-filterbar button{min-height:33px}
+.ap-compact .ap-results{max-height:230px;overflow:auto;margin-top:0}
+.ap-compact .ap-results td,.ap-compact .ap-results th{padding:6px 9px;font-size:11px}
+.ap-compact .ap-results th{position:sticky;top:0}
+.ap-compact .ap-pick-cell{width:40px}
+.ap-compact .ap-pick{min-width:28px;height:26px;border-radius:6px;border:1px solid #d4e1ef;background:#fff;color:#315d8b;cursor:pointer;font-size:15px;line-height:1;padding:0}
+.ap-compact .ap-pick.selected{background:#2f5d86;color:#fff;border-color:#2f5d86}
+.ap-compact .ap-name{font-weight:600}
+.ap-compact .ap-name small,.ap-compact .ap-identity small{display:block;margin-top:2px;font-size:10px;color:#778598;font-weight:400}
+.ap-compact .ap-row-footer{justify-content:space-between;color:#72839a;font-size:10px;margin-top:5px;min-height:22px}
+.ap-compact .ap-subsection{border-top:1px solid #e7edf5;padding-top:10px;margin-top:9px}
+.ap-compact .ap-edit-table{min-width:860px}
+.ap-compact .ap-table-wrap{margin-top:0}
+.ap-compact .ap-edit-table td,.ap-compact .ap-edit-table th{padding:6px;vertical-align:middle}
+.ap-compact .ap-edit-table td input{font-size:11px;padding:4px;min-height:28px}
+.ap-compact .ap-edit-table td input[data-ap-field=similitud]{max-width:92px}
+.ap-compact .ap-edit-table .ap-identity{min-width:150px}
+.ap-compact .ap-status{display:block;margin-top:3px;font-size:10px}
+.ap-compact .ap-link{background:none;border:0;color:#315c8a;cursor:pointer;font-size:11px;padding:3px 4px;text-decoration:none}
+.ap-compact .ap-link:hover{text-decoration:underline}
+.ap-compact .ap-empty{padding:18px 9px;font-size:11px}
+.ap-compact .ap-empty-selection{padding:10px 6px}
+.ap-compact .ap-form-compact{grid-template-columns:minmax(135px,190px) minmax(260px,1.5fr) minmax(135px,190px) repeat(3,minmax(120px,1fr));gap:9px}
+.ap-compact .ap-label{font-size:10px;gap:3px}
+.ap-compact .ap-label input{min-height:32px;padding:6px 8px;font-size:11px}
+.ap-compact .ap-code-field{min-height:32px;font-size:11px;padding:6px}
+.ap-compact .ap-code-field strong{font-size:10px}
+.ap-compact .ap-label .ap-mini{font-size:9px;line-height:1.25;color:#8291a3}
+.ap-compact .ap-pill{font-size:10px;padding:3px 7px}
+.ap-compact .ap-exportbar{margin-top:10px;align-items:center}
+.ap-compact .ap-exportbar .ap-mini{font-size:10px}
+.ap-compact .ap-error{padding:8px 10px;border:1px solid #edc8c8;border-radius:7px;background:#fff5f5;color:#9a3d3d;line-height:1.4}
+.ap-compact .ap-validation{margin:10px 0}
+.ap-compact .ap-validation ul{margin:5px 0 0;padding-left:18px}
+.ap-compact .ap-src-editor{min-width:155px}
+.ap-compact .ap-preview-scroll{margin-top:10px}
+@media (max-width:1150px){
+ .ap-compact .ap-form-compact{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:700px){
+ .ap-compact .ap-filterbar{grid-template-columns:1fr 1fr}
+ .ap-compact .ap-filterbar input{grid-column:1/-1}
+ .ap-compact .ap-form-compact{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ap-compact .ap-title h1{font-size:18px}
+}
