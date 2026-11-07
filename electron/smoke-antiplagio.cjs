@@ -31,9 +31,9 @@ function students(count){
     return r;
   });
 }
-function documentFor(count){
+function documentFor(count,tipoDocumento='trabajo'){
   const demo=students(count);
-  const html=(count===1?M.individualHTML({...demo[0],...M.example(demo[0].estudianteId),folio:meta.codigo,fecha:meta.fecha,referencia:'UTET-ANT-2026-11-0001'},meta,label):M.renderPDF(meta,demo,label)).replaceAll('src="assets/logo-itsqmet.png"',
+  const html=(count===1?M.individualHTML({...demo[0],...M.example(demo[0].estudianteId),folio:meta.codigo,fecha:meta.fecha,referencia:'UTET-ANT-2026-11-0001'},meta,label,tipoDocumento):M.renderPDF(meta,demo,label)).replaceAll('src="assets/logo-itsqmet.png"',
     'src="data:image/png;base64,'+logo+'"').replaceAll('src="assets/memorando-pie-itsqmet.svg"',
     'src="data:image/svg+xml;base64,'+footerSVG+'"');
   const pages=(html.match(/class="inst-page ap-page/g)||[]).length;
@@ -43,8 +43,8 @@ function documentFor(count){
     '<style>'+styles+'</style></head><body>'+html+'</body></html>';
   return {src,pages};
 }
-async function check(count,expected){
-  const {src,pages}=documentFor(count);
+async function check(count,expected,tipoDocumento='trabajo'){
+  const {src,pages}=documentFor(count,tipoDocumento);
   console.log('PDF smoke: '+count+' estudiantes; '+pages+' páginas previstas; HTML '+Buffer.byteLength(src)+' bytes.');
   if(expected)assert.equal(pages,expected);
   const win=new BrowserWindow({show:false,webPreferences:{
@@ -65,11 +65,12 @@ async function check(count,expected){
     assert.equal(detected,pages,'El PDF no debe agregar páginas ni perderlas: '+count+' estudiantes');
     if(process.env.UTET_SMOKE_ARTIFACT_DIR && count===1){
       fs.mkdirSync(process.env.UTET_SMOKE_ARTIFACT_DIR,{recursive:true});
-      fs.writeFileSync(path.join(process.env.UTET_SMOKE_ARTIFACT_DIR,'memorando-revision.pdf'),pdf);
+      fs.writeFileSync(path.join(process.env.UTET_SMOKE_ARTIFACT_DIR,tipoDocumento==='articulo'?'memorando-articulo-revision.pdf':'memorando-revision.pdf'),pdf);
     }
     console.log('OK Electron PDF: '+count+' estudiantes, '+detected+' páginas, '+pdf.length+' bytes.');
   }finally{win.destroy();fs.rmSync(tmp,{recursive:true,force:true});}
 }
 const counts=process.argv.includes('--many')?[54]:[1];
-app.whenReady().then(async()=>{for(const count of counts)await check(count,count===1?2:null);process.exit(0);})
+const tipoDocumento=process.argv.includes('--articulo')?'articulo':'trabajo';
+app.whenReady().then(async()=>{for(const count of counts)await check(count,count===1?2:null,tipoDocumento);process.exit(0);})
   .catch(err=>{console.error(err);process.exit(1);});

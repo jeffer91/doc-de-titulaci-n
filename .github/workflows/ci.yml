@@ -23,12 +23,15 @@ jobs:
           UTET_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/utet-pdf-qa
         run: |
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --one
+          xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --articulo
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --many
       - name: Adjuntar PDF ficticio para inspección visual
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: memorando-control-PRO-164
-          path: ${{ runner.temp }}/utet-pdf-qa/memorando-revision.pdf
+          name: memorandos-control-PRO-164-y-PRO-57
+          path: |
+            ${{ runner.temp }}/utet-pdf-qa/memorando-revision.pdf
+            ${{ runner.temp }}/utet-pdf-qa/memorando-articulo-revision.pdf
           if-no-files-found: ignore
           retention-days: 3

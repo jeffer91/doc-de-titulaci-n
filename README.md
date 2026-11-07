@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.7.5)
+# Doc de Titulación · UTET (Electron v0.8.0)
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
@@ -24,6 +24,18 @@ npm run dist:win
 ```
 
 El instalador final se genera en `dist/` en Windows; un proyecto abierto con `npm start` sigue lanzándose a través de Electron y **no crea por sí mismo un acceso directo**. Los accesos directos anteriores pueden conservar su icono hasta reinstalar o actualizar el acceso directo. No se cambian los datos de SQLite ni el proyecto Firebase por este ajuste visual.
+
+## PRO-57 · Porcentaje de Plagio de Artículo Académico
+
+El documento `plagio-articulo` del proceso **UTET-PRO-57** abre el mismo formulario compacto y genera exactamente el mismo memorando institucional de dos páginas (membrete, número, destinatario, firma, pie y anexo con tres tarjetas, gráficos y siete fuentes) que `plagio-trabajo` del PRO-164.
+
+- En el memorando y la conclusión todas las referencias específicas al trabajo se sustituyen por **artículo académico**. Asunto: **RESULTADO DEL ANÁLISIS DE SIMILITUD DEL ARTÍCULO ACADÉMICO**.
+- Se reutiliza la lista académica de Firebase/SQLite por período; al abrir Artículo por primera vez con el período ya descargado solo se recuperan sus memorandos, sin consultar nuevamente todas las matrículas.
+- **Registros independientes:** en Firestore se utiliza la colección existente `UTET_antiplagio_memorandos` con documentos de artículo identificados por `articulo__<periodoId>__<cedula>`, y atributo `tipoDocumento: "articulo"`. Los documentos antiguos de Trabajo continúan usando `<periodoId>__<cedula>` y se interpretan como `tipoDocumento: "trabajo"`.
+- En SQLite se añade automáticamente `memorandos_articulo` y `articulos_sync` sin borrar ni migrar destructivamente `memorandos` del PRO-164.
+- **Consecutivo mensual compartido:** ambos tipos reservan folio en `UTET_antiplagio_correlativos` y referencia en `UTET_antiplagio_referencias`. No se reinicia la numeración al cambiar de proceso.
+- Correcciones, recuperación de registros, PDF individual, carpeta Descargas y ZIP se comportan como en PRO-164; un tipo de documento no sobrescribe el registro del otro.
+- Firebase requiere permisos institucionales reales de escritura. Nunca se crean números locales oficiales sin una transacción confirmada.
 
 ## PRO-164 · Memorandos individuales de similitud
 
