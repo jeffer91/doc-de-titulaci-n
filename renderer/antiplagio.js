@@ -1,10 +1,10 @@
 'use strict';
-/* PRO-164: consulta SQLite local-first. Firebase solo primera carga o actualización explícita. */
+/* PRO-164 y PRO-57: mismo formulario y plantilla, datos separados por tipo. */
 window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
  const {state,period,go,render,showToast}=ctx,M=window.UTET_ANTIPLAGIO_MODEL;
  const esc=M.E, $=id=>document.getElementById(id);
  const normal=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
- const session={students:[],selected:new Map(),saved:new Map(),dirty:new Set(),draftTimers:new Map(),draftWrites:new Map(),
+ const session={tipoDocumento:'trabajo',students:[],selected:new Map(),saved:new Map(),dirty:new Set(),draftTimers:new Map(),draftWrites:new Map(),
   loadedPeriod:'',loading:false,request:0,syncedAt:null,source:'',warning:'',
   query:'',career:'',busy:false,error:'',saveError:'',status:'Sin datos locales',problems:[],showSources:''};
  const selected=()=>[...session.selected.values()];
@@ -12,31 +12,31 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   (!session.query||normal(s.nombres+' '+s.cedula+' '+s.carreraNombre).includes(normal(session.query))));
  const btn=(action,label,css='btn btn-small',id='')=>'<button type="button" class="'+css+'" data-action="'+action+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+label+'</button>';
 
- function payload(row,p=state.periodId){
-  return {...row,periodoId:p,estudianteId:p+'__'+row.cedula,
+ function payload(row,p=state.periodId,modo=session.tipoDocumento){
+  return {...row,tipoDocumento:modo,periodoId:p,estudianteId:p+'__'+row.cedula,
    periodoNombre:row.periodoNombre||period().label,
    fecha:row.fecha||M.periodDate(p),versionPlantilla:row.versionPlantilla||'2'};
  }
- function saveLocalDraft(row,p=state.periodId){
+ function saveLocalDraft(row,p=state.periodId,modo=row.tipoDocumento||session.tipoDocumento){
   if(!window.utetDesktop?.saveAntiplagioDraft)return Promise.resolve();
-  const snapshot=payload(row,p);
+  const snapshot=payload(row,p,modo);
   const promise=window.utetDesktop.saveAntiplagioDraft(snapshot).catch(error=>{
    if(p===state.periodId){session.saveError='No se pudo guardar el borrador local: '+String(error.message||error).slice(0,160);}
   });
-  session.draftWrites.set(p+'__'+row.cedula,promise);
-  promise.finally(()=>{if(session.draftWrites.get(p+'__'+row.cedula)===promise)session.draftWrites.delete(p+'__'+row.cedula);});
+  session.draftWrites.set(modo+'__'+p+'__'+row.cedula,promise);
+  promise.finally(()=>{if(session.draftWrites.get(modo+'__'+p+'__'+row.cedula)===promise)session.draftWrites.delete(modo+'__'+p+'__'+row.cedula);});
   return promise;
  }
  function scheduleDraft(row){
-  const p=state.periodId,id=p+'__'+row.cedula;
+  const p=state.periodId,modo=session.tipoDocumento,id=modo+'__'+p+'__'+row.cedula;
   if(session.draftTimers.has(id))clearTimeout(session.draftTimers.get(id).timer);
-  const timer=setTimeout(()=>{session.draftTimers.delete(id);saveLocalDraft(row,p);},450);
-  session.draftTimers.set(id,{timer,row,p});
+  const timer=setTimeout(()=>{session.draftTimers.delete(id);saveLocalDraft(row,p,modo);},450);
+  session.draftTimers.set(id,{timer,row,p,modo});
  }
  function flushDraftTimers(){
   const writes=[];
   for(const [id,item] of session.draftTimers){
-   clearTimeout(item.timer);writes.push(saveLocalDraft(item.row,item.p));
+   clearTimeout(item.timer);writes.push(saveLocalDraft(item.row,item.p,item.modo));
   }
   session.draftTimers.clear();
   writes.push(...session.draftWrites.values());
@@ -49,15 +49,17 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   session.saveError='';session.status='Sin datos locales';session.problems=[];session.showSources='';
   session.syncedAt=null;session.source='';session.warning='';
  }
- function open(){
-  if(session.loadedPeriod&&session.loadedPeriod!==state.periodId)reset();
+ function open(modo='trabajo'){
+  if(!['trabajo','articulo'].includes(modo))throw Error('Modalidad documental inválida.');
+  if(session.tipoDocumento!==modo||(session.loadedPeriod&&session.loadedPeriod!==state.periodId))reset();
+  session.tipoDocumento=modo;
   go('antiplagio');
   if(session.loadedPeriod!==state.periodId&&!session.loading)load();
  }
  function onPeriodChange(){reset();go('antiplagio');load();}
  async function load(force=false){
   if(session.loading)return;
-  const target=state.periodId,ticket=++session.request;
+  const target=state.periodId,modo=session.tipoDocumento,ticket=++session.request;
   session.loading=true;session.error='';
   session.status=force?'Actualizando Firebase...':'Abriendo base local...';
   render();
@@ -65,8 +67,8 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
    if(force)await flushDraftTimers();
    const api=force?window.utetDesktop?.refreshAntiplagioPeriod:window.utetDesktop?.openAntiplagioPeriod;
    if(!api)throw Error('Actualiza Electron para utilizar la base SQLite local.');
-   const data=await api(target);
-   if(ticket!==session.request||target!==state.periodId)return;
+   const data=await api(target,modo);
+   if(ticket!==session.request||target!==state.periodId||modo!==session.tipoDocumento)return;
    if(data?.periodoId!==target||!Array.isArray(data.students)||!Array.isArray(data.records))
      throw Error('La base local devolvió una respuesta inválida.');
    session.students=data.students;
@@ -78,7 +80,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
    session.status=session.students.length+' estudiantes · '+session.saved.size+' memorandos · '+session.source;
    if(force)showToast('Datos del período actualizados en SQLite.');
   }catch(error){
-   if(ticket!==session.request||target!==state.periodId)return;
+   if(ticket!==session.request||target!==state.periodId||modo!==session.tipoDocumento)return;
    session.error=String(error?.message||error).slice(0,280);
    if(session.loadedPeriod===target)session.status='Datos locales disponibles · error de actualización';
    else{session.students=[];session.saved.clear();session.status='No hay copia local disponible';}
@@ -123,7 +125,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
  }
  function renderView(){
   const n=session.selected.size;
-  return '<div class="ap-workspace ap-compact"><div class="ap-title"><h1>Antiplagio <span>· PRO-164</span></h1>'+
+  return '<div class="ap-workspace ap-compact"><div class="ap-title"><h1>Antiplagio <span>· '+(session.tipoDocumento==='articulo'?'Artículo Académico · PRO-57':'Trabajo de Titulación · PRO-164')+'</span></h1>'+
     '<div class="ap-actions"><span class="ap-connect'+(session.loadedPeriod===state.periodId?' ready':'')+'">'+esc(session.status)+'</span>'+btn('ap-back','Volver','ap-link')+'</div></div>'+
     '<section class="ap-panel"><div class="ap-section-head"><h2>Estudiantes · '+esc(period().label)+'</h2>'+btn('ap-refresh',session.loading?'Actualizando...':'Actualizar Firebase')+'</div>'+
     '<p class="ap-mini">Última sincronización: '+esc(session.syncedAt?new Date(session.syncedAt).toLocaleString('es-EC'):'Todavía no sincronizado')+' · Los filtros usan SQLite local.</p>'+
@@ -134,7 +136,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
     (session.saveError?'<p class="ap-error" role="alert">'+esc(session.saveError)+'</p>':'')+
     '<div class="ap-actions ap-exportbar">'+btn('ap-pdfs',session.busy?'Generando...':'PDF individuales','btn btn-primary')+
     btn('ap-zip',session.busy?'Generando...':'Descargar ZIP')+'</div>'+
-    '<p class="ap-mini">Los archivos se descargan directamente en Descargas. Los registros simulados se identifican en el PDF.</p></section></div>';
+    '<p class="ap-mini">Los archivos se descargan directamente en Descargas.</p></section></div>';
  }
  function addOne(id){
   const student=session.students.find(s=>s.cedula===id);
@@ -143,9 +145,9 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   else{
    const stored=session.saved.get(id);
    const base=M.createRow(student);
-   const specimen=M.example(student.estudianteId);
+   const specimen=M.example(session.tipoDocumento==='articulo'?'articulo__'+student.estudianteId:student.estudianteId);
    session.selected.set(id,stored?{...base,...stored,fuentes:{...base.fuentes,...stored.fuentes}}:
-     {...base,...student,...specimen,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});
+     {...base,...student,...specimen,tipoDocumento:session.tipoDocumento,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});
   }
   if(session.selected.get(id)?.syncStatus==='pendiente')session.dirty.add(id);
   session.saveError='';render();
@@ -156,27 +158,27 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   if(!window.utetDesktop?.saveAntiplagioRecord||!window.utetDesktop?.exportAntiplagioFiles){
    session.saveError='Actualiza Electron antes de generar memorandos.';render();return;
   }
-  const p=state.periodId;
+  const p=state.periodId,modo=session.tipoDocumento;
   session.busy=true;session.saveError='';render();
   try{
    const files=[];
    for(const row of rows){
-    if(state.periodId!==p)throw Error('El período cambió durante la exportación.');
+    if(state.periodId!==p||session.tipoDocumento!==modo)throw Error('El período o documento cambió durante la exportación.');
     if(M.number(row.similitud)===null)throw Error('Porcentaje inválido para '+row.nombres);
-    const id=p+'__'+row.cedula,timer=session.draftTimers.get(id);
+    const id=modo+'__'+p+'__'+row.cedula,timer=session.draftTimers.get(id);
     if(timer){clearTimeout(timer.timer);session.draftTimers.delete(id);}
     if(session.draftWrites.has(id))await session.draftWrites.get(id);
     const needsSync=!row.folio||!row.referencia||session.dirty.has(row.cedula)||row.syncStatus==='pendiente';
     if(needsSync){
      // Solo los documentos nuevos o modificados escriben en Firebase.
      // Los ya emitidos se reconstruyen desde SQLite, incluso sin conexión.
-     const official=await window.utetDesktop.saveAntiplagioRecord(payload(row,p));
+     const official=await window.utetDesktop.saveAntiplagioRecord(payload(row,p,modo));
      row.folio=official.folio;row.referencia=official.referencia;row.fecha=official.fecha;
      row.syncStatus='sincronizado';
      session.dirty.delete(row.cedula);
      session.saved.set(row.cedula,{...row});
     }
-    const html=M.individualHTML(row,{},period().label);
+    const html=M.individualHTML(row,{},period().label,modo);
     const name=('MEM_'+row.folio.replace(/[^A-Za-z0-9._-]/g,'_')+'_'+row.cedula+'.pdf').slice(0,120);
     files.push({name,html});
    }
@@ -188,7 +190,9 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   }finally{session.busy=false;render();}
  }
  function handleAction(a,id){
-  if((a==='rec-open'||a==='new-doc')&&id==='plagio-trabajo'){open();return true;}
+  if((a==='rec-open'||a==='new-doc')&&['plagio-trabajo','plagio-articulo'].includes(id)){
+   open(id==='plagio-articulo'?'articulo':'trabajo');return true;
+  }
   if(!a?.startsWith('ap-'))return false;
   if(a==='ap-back')go('documentos');
   else if(a==='ap-refresh')load(true);
@@ -197,9 +201,9 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   else if(a==='ap-clear'){session.selected.clear();render();}
   else if(a==='ap-sources'){session.showSources=session.showSources===id?'':id;render();}
   else if(a==='ap-add-filtered'){filtered().forEach(s=>{
-   if(!session.selected.has(s.cedula)){const old=session.saved.get(s.cedula),base=M.createRow(s),example=M.example(s.estudianteId);
+   if(!session.selected.has(s.cedula)){const old=session.saved.get(s.cedula),base=M.createRow(s),example=M.example(session.tipoDocumento==='articulo'?'articulo__'+s.estudianteId:s.estudianteId);
     session.selected.set(s.cedula,old?{...base,...old,fuentes:{...base.fuentes,...old.fuentes}}:
-      {...base,...s,...example,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});}
+      {...base,...s,...example,tipoDocumento:session.tipoDocumento,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});}
    });render();}
   else if(a==='ap-one'){const item=session.selected.get(id);if(item)exportDocs([item],'pdfs');}
   else if(a==='ap-pdfs')exportDocs(selected(),'pdfs');
