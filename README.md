@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.5.1 · PRO-164 integrado)
+# Doc de Titulación · UTET (Electron v0.5.2 · PRO-164 integrado)
 
 Maqueta de escritorio para gestionar documentos de la **Unidad de Titulación y Eficiencia Terminal (ITSQMET)** por período académico, requisito y proceso. Conserva **6 períodos**, **11 requisitos**, **9 procesos** y **24 registros documentales aprobados** por el usuario.
 
@@ -26,6 +26,14 @@ La salida de antiplagio utiliza la nomenclatura **`No. XX MEM-ITSQMET-UTET-AAAA-
 - La numeración se reinicia a `01` el primer día de cada mes nuevo; meses anteriores mantienen su secuencia.
 - El registro reside en `app.getPath('userData')/utet-memorandos-numeracion.json` (fuera del repositorio); no almacena estudiantes ni resultados. Una base dañada bloquea la emisión en lugar de volver automáticamente a `01`.
 - **Límite actual:** el contador es **local al equipo**, no institucional multiusuario. Si ya se emitieron memorandos en otro sistema o equipo, puede existir una colisión. Antes de declarar el correlativo oficial de toda UTET hace falta conciliar el histórico e implantar un contador central transaccional con autenticación y reglas vigentes en Firebase. No se han modificado las reglas de producción.
+
+## Corrección de lectura de Firebase (v0.5.2)
+
+- Se reemplazaron las solicitudes REST manuales `:runQuery` y `:batchGet` por el **SDK oficial Firebase Firestore Lite** (`firebase/firestore/lite`), apto para consultas online de solo lectura desde Node/Electron. El servicio se inicializa una sola vez en el proceso principal usando la configuración web de UTET.
+- Se conserva el esquema de Requisitos V2: `matriculas` filtradas por `periodoId` y documentos `Estudiante/{cedula}`. No se consultan períodos ajenos, y se omiten matrículas eliminadas. Consulta limitada a 5000 matrículas por período y fichas leídas en grupos de 12.
+- No se solicita cuenta, contraseña ni credenciales privadas; **las reglas actuales de Firestore determinan si puede realizarse la lectura**. Esta corrección no altera permisos ni hace pública ninguna colección.
+- Los errores del SDK se informan con su código y operación (por ejemplo `permission-denied · matriculas` o `invalid-argument · Estudiante`) en lugar de ocultarlos tras `Bad Request`.
+- Las pruebas usan un doble del SDK y comprueban datos y errores. La comprobación con la **base real** requiere ejecutar la aplicación en el equipo autorizado.
 
 ## Interfaz compacta y conexión automática (v0.5.1)
 
@@ -101,7 +109,7 @@ La app solo consulta Firebase para PRO-164 bajo demanda; no ejecuta escrituras y
 ## Estructura
 
 - `electron/main.js`: ventana Electron y exportación aislada de PDF.
-- `electron/firebase-read.js`: lector Firebase de matrículas y estudiantes, solo lectura directa y sin formulario de sesión.
+- `electron/firebase-read.js`: lector Firebase mediante SDK Firestore Lite; solo lectura directa y sin formulario de sesión.
 - `electron/memo-numbering.js`: contador local de memorandos UTET, secuencial por mes de emisión y persistente.
 - `renderer/antiplagio.js`, `renderer/antiplagio.model.js`, `renderer/antiplagio.css`: selección, validación y PDF específico PRO-164.
 - `electron/preload.js`: puente IPC restringido.
