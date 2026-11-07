@@ -1,6 +1,6 @@
 {
   "name": "doc-de-titulacion",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Maqueta Electron de gestión documental UTET por período y requisitos",
   "main": "electron/main.js",
@@ -13,6 +13,7 @@
     "electron": "^38.0.0"
   },
   "dependencies": {
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "firebase": "^13.2.0"
   }
 }
