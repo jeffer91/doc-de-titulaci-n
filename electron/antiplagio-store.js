@@ -11,13 +11,16 @@ function firestore(){if(!db){const app=getApps().find(a=>a.name===APP)||initiali
 const periodValid=s=>/^\d{4}-(0[1-9]|1[0-2])__\d{4}-(0[1-9]|1[0-2])$/.test(String(s||''));
 const cedulaValid=s=>/^[0-9A-Za-z]{6,20}$/.test(String(s||''));
 const dateValid=s=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(String(s||'')))return false;const [y,m,d]=s.split('-').map(Number),v=new Date(Date.UTC(y,m-1,d));return v.getUTCFullYear()===y&&v.getUTCMonth()+1===m&&v.getUTCDate()===d;};
-function key(periodoId,cedula){if(!periodValid(periodoId)||!cedulaValid(cedula))throw Error('Identificación del estudiante o período inválida.');return periodoId+'__'+cedula;}
+const tipos=['trabajo','articulo'];
+function tipo(x='trabajo'){if(!tipos.includes(x))throw Error('Tipo de memorando no permitido.');return x;}
+function key(periodoId,cedula,modo='trabajo'){if(!periodValid(periodoId)||!cedulaValid(cedula))throw Error('Identificación del estudiante o período inválida.');return (tipo(modo)==='articulo'?'articulo__':'')+periodoId+'__'+cedula;}
 function code(n,date){return String(n).padStart(2,'0')+' MEM-ITSQMET-UTET-'+date;}
 function safeRecord(x){
   if(!x||typeof x!=='object')throw Error('Memorando inválido.');
-  const keys=['periodoId','cedula','estudianteId','nombres','carreraNombre','modalidad','sede','jornada','periodoNombre','similitud','fecha','referencia','herramienta','origen','fuentes','versionPlantilla'];
+  const keys=['tipoDocumento','periodoId','cedula','estudianteId','nombres','carreraNombre','modalidad','sede','jornada','periodoNombre','similitud','fecha','referencia','herramienta','origen','fuentes','versionPlantilla'];
   const r={};
   for(const k of keys){if(k==='fuentes')continue;r[k]=String(x[k]??'').slice(0,220);}
+  r.tipoDocumento=tipo(r.tipoDocumento||'trabajo');
   if(!periodValid(r.periodoId)||!cedulaValid(r.cedula)||r.estudianteId!==key(r.periodoId,r.cedula))throw Error('Registro no coincide con la ficha académica.');
   if(!dateValid(r.fecha))throw Error('Fecha de emisión inválida.');
   const n=Number(String(r.similitud).replace(',','.'));
@@ -28,15 +31,16 @@ function safeRecord(x){
   return r;
 }
 function explain(error){const c=String(error?.code||'');if(/permission-denied|unauthenticated/.test(c))throw Error('Firebase no autoriza guardar memorandos. Configura un acceso institucional protegido; no habilites escritura pública.');throw error;}
-async function get(periodoId,cedula){
-  try{const snap=await getDoc(doc(firestore(),RECORDS,key(periodoId,cedula)));return snap.exists()?snap.data():null;}catch(e){return explain(e);}
+async function get(periodoId,cedula,modo='trabajo'){
+  try{const snap=await getDoc(doc(firestore(),RECORDS,key(periodoId,cedula,modo)));return snap.exists()?snap.data():null;}catch(e){return explain(e);}
 }
-async function list(periodoId){
+async function list(periodoId,modo='trabajo'){
   if(!periodValid(periodoId))throw Error('Período inválido.');
-  try{const snap=await getDocs(query(collection(firestore(),RECORDS),where('periodoId','==',periodoId),limit(5000)));return snap.docs.map(x=>x.data());}catch(e){return explain(e);}
+  tipo(modo);
+  try{const snap=await getDocs(query(collection(firestore(),RECORDS),where('periodoId','==',periodoId),limit(5000)));return snap.docs.map(x=>x.data()).filter(x=>(x.tipoDocumento||'trabajo')===modo);}catch(e){return explain(e);}
 }
 async function save(input){
- const record=safeRecord(input),id=key(record.periodoId,record.cedula),month=record.fecha.slice(0,7),database=firestore();
+ const record=safeRecord(input),id=key(record.periodoId,record.cedula,record.tipoDocumento),month=record.fecha.slice(0,7),database=firestore();
  const recordRef=doc(database,RECORDS,id),counterRef=doc(database,COUNTERS,month),referenceRef=doc(database,REFCOUNTERS,month);
  try{return await runTransaction(database,async tx=>{
    const previous=await tx.get(recordRef);
@@ -61,4 +65,4 @@ async function save(input){
    return {folio,numero:number,fecha:record.fecha,referencia,existing:false};
  });}catch(e){return explain(e);}
 }
-module.exports={get,list,save,key,code,safeRecord,dateValid,periodValid,cedulaValid,RECORDS,COUNTERS,REFCOUNTERS};
+module.exports={get,list,save,key,code,safeRecord,dateValid,periodValid,cedulaValid,tipo,RECORDS,COUNTERS,REFCOUNTERS};
