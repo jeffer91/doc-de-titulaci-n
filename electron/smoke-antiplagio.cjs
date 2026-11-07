@@ -12,7 +12,7 @@ const ctx={window:{}};
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(renderer,'antiplagio.model.js'),'utf8'),ctx);
 const M=ctx.window.UTET_ANTIPLAGIO_MODEL;
-const meta={codigo:'MEM-ITSQMET-UTET-2026-11-001',destinatario:'Autoridad de ejemplo',
+const meta={codigo:'01 MEM-ITSQMET-UTET-2026-11-07',destinatario:'Autoridad de ejemplo',
   cargoDestinatario:'Responsable académico',fecha:'2026-11-07',fechaCorte:'2026-11-06'};
 const label='Abril 2026 a Septiembre 2026';
 const careers=['CONTABILIDAD','ADMINISTRACIÓN','ENFERMERÍA','DESARROLLO DE SOFTWARE'];
