@@ -70,6 +70,9 @@ assert.ok(pdf.includes('Fuentes identificadas en las evidencias'));
 assert.ok(pdf.includes('Página 1 de'));
 async function testFirebase(){
   const firebase=require('../electron/firebase-read.js');
+  const sdkStatus=firebase.status();
+  assert.equal(sdkStatus.projectId,'utet-4387a');
+  assert.equal(sdkStatus.initialized,true,'Firestore Lite debe inicializarse en Node/Electron');
   const p='2026-04__2026-09';
   const trace={queries:[],students:[]};
   const store={
