@@ -3,6 +3,7 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const Excel = require('./excel.js');
+const Firebase = require('./firebase-read.js');
 
 const ROOT = path.join(__dirname, '..');
 const RENDERER = path.join(ROOT, 'renderer');
@@ -34,14 +35,15 @@ function verifySender(event) {
 }
 
 async function createPrintHTML(documentMarkup) {
-  const [css, asset] = await Promise.all([
+  const [css, extraCss, asset] = await Promise.all([
     fs.readFile(path.join(RENDERER,'institutional.css'),'utf8'),
+    fs.readFile(path.join(RENDERER,'antiplagio.css'),'utf8'),
     fs.readFile(path.join(RENDERER,'assets','logo-itsqmet.png'))
   ]);
   const logoURL = `data:image/png;base64,${asset.toString('base64')}`;
   // La única imagen interna empleada por el motor de portadas se convierte a data:.
   const markup = documentMarkup.replaceAll('src="assets/logo-itsqmet.png"',`src="${logoURL}"`);
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:white}*{box-sizing:border-box}</style><style>${css}</style></head><body>${markup}</body></html>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:white}*{box-sizing:border-box}</style><style>${css}</style><style>${extraCss}</style></head><body>${markup}</body></html>`;
 }
 
 async function savePDF(event, input) {
@@ -53,7 +55,7 @@ async function savePDF(event, input) {
     .replace(/[^\p{L}\p{N}_ .-]/gu,'_').slice(0,90);
   const owner = BrowserWindow.fromWebContents(event.sender);
   const { canceled, filePath } = await dialog.showSaveDialog(owner, {
-    title:'Exportar documento de MAQUETA en PDF',
+    title:input.kind==='antiplagio'?'Exportar memorando de antiplagio en PDF':'Exportar documento de MAQUETA en PDF',
     defaultPath:base.endsWith('.pdf')?base:base+'.pdf',
     filters:[{name:'Archivo PDF',extensions:['pdf']}]
   });
@@ -85,6 +87,10 @@ async function savePDF(event, input) {
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);
   ipcMain.handle('utet:save-pdf',savePDF);
+  ipcMain.handle('utet:firebase-students',(event,periodoId)=>{verifySender(event);return Firebase.loadStudents(periodoId);});
+  ipcMain.handle('utet:firebase-login',(event,credentials)=>{verifySender(event);return Firebase.signIn(credentials?.email,credentials?.password);});
+  ipcMain.handle('utet:firebase-logout',(event)=>{verifySender(event);return Firebase.signOut();});
+  ipcMain.handle('utet:firebase-status',(event)=>{verifySender(event);return Firebase.status();});
   ipcMain.handle('utet:excel-template',(event,spec)=>{verifySender(event);return Excel.downloadTemplate(event,spec);});
   ipcMain.handle('utet:excel-import',(event,spec)=>{verifySender(event);return Excel.importWorkbook(event,spec);});
   createWindow();
