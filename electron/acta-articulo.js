@@ -4,7 +4,8 @@
  * La emisión requiere verificación nueva, y siempre falla cerrada si faltan datos.
  */
 const {initializeApp,getApps}=require('firebase/app');
-const {getFirestore,doc,getDoc,runTransaction}=require('firebase/firestore');
+const {getFirestore,doc,getDocFromServer,runTransaction}=require('firebase/firestore');
+const PdfModel=require('../renderer/acta-articulo.model.js');
 const {FIREBASE_CONFIG}=require('./firebase-read.js');
 const Local=require('./antiplagio-local.js');
 const Dates=require('./acta-articulo-date.js');
@@ -49,7 +50,7 @@ async function readEvidence(periodoId,cedula,baseDir){
   doc(d,'UTET_antiplagio_memorandos','articulo__'+id)
  ];
  let snaps;
- try{snaps=await Promise.all(refs.map(x=>getDoc(x)));}
+ try{snaps=await Promise.all(refs.map(x=>getDocFromServer(x)));}
  catch(error){return explain(error);}
  const [requisitos,notas,matricula,antiplagio]=snaps.map(s=>s.exists()?s.data():null);
  const evaluation=Evidence.assess({requisitos,notas,matricula,antiplagio,periodoId,cedula});
@@ -79,10 +80,24 @@ function numberCode(date,cedula,num){
  if(!Number.isSafeInteger(num)||num<1||num>9999)throw Error('El consecutivo mensual de actas está agotado.');
  return 'AA-'+date.year+'-'+cedula.slice(0,4)+'-'+date.monthNumber+'-'+String(num).padStart(4,'0');
 }
+async function recover(periodoId,cedula,baseDir){
+ const id=identity(periodoId,cedula);
+ let snapshot;
+ try{snapshot=await getDocFromServer(doc(db(),REGISTRY,'AA__'+id));}
+ catch(error){return explain(error);}
+ if(!snapshot.exists())return null;
+ const record=snapshot.data();
+ if(record.periodoId!==periodoId||record.cedula!==cedula||!PdfModel.valid(record))
+  throw Error('El registro central del acta no coincide con el documento institucional esperado.');
+ await Local.saveActa(baseDir,record);
+ return record;
+}
 async function issue(periodoId,cedula,baseDir){
  identity(periodoId,cedula);
  const existing=await Local.getActa(baseDir,periodoId,cedula);
  if(existing)return existing;
+ const recovered=await recover(periodoId,cedula,baseDir);
+ if(recovered)return recovered;
  const p=Dates.forPeriod(periodoId);
  if(!Dates.allowed(periodoId).ready){
   throw Error(p.calendarVerified?'La fecha institucional de emisión aún no ha llegado: '+p.date+'.':'Falta validar oficialmente el calendario de feriados para el año de emisión.');
@@ -132,4 +147,4 @@ async function get(baseDir,periodoId,cedula){
  identity(periodoId,cedula);
  return Local.getActa(baseDir,periodoId,cedula);
 }
-module.exports={openPeriod,refreshStudents,readEvidence,issue,get,numberCode,identity,cleanCareer,REGISTRY,COUNTERS,NUMBERS};
+module.exports={openPeriod,refreshStudents,readEvidence,issue,recover,get,numberCode,identity,cleanCareer,REGISTRY,COUNTERS,NUMBERS};
