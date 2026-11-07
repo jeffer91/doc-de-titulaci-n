@@ -310,21 +310,13 @@
 .inst-antiplagio .ap-word-memorandum .ap-word-body,
 .inst-antiplagio .ap-word-memorandum .ap-word-field>span,
 .inst-antiplagio .ap-word-memorandum .ap-word-code{color:#000!important}
-/* Una simulación nunca debe confundirse con un certificado de medición real.
-   Marca discreta en ambos folios, sin la frase anterior. */
-.inst-antiplagio .ap-page.ap-simulation::after{
-  content:"SIMULACIÓN";
-  position:absolute;
-  top:53%;
-  left:50%;
-  transform:translate(-50%,-50%) rotate(-24deg);
-  font:700 44pt/1 Arial,Helvetica,sans-serif;
-  letter-spacing:.08em;
-  color:#000;
-  opacity:.085;
-  white-space:nowrap;
-  pointer-events:none;
-  z-index:5;
+/* Las muestras de formato no llevan ninguna marca de agua sobre gráficos o texto.
+   Una indicación breve en el anexo distingue un dato de demostración. */
+.inst-antiplagio .ap-word-report .ap-sample-note{
+  margin:1.4mm 0 0;
+  color:#69778a;
+  font:7pt/1.25 Arial,Helvetica,sans-serif;
+  text-align:left;
 }
 /* Breve contextualización del anexo técnico; no se agrega texto a la portada. */
 .inst-antiplagio .ap-word-report .ap-word-context{

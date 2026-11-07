@@ -1,4 +1,4 @@
-# Doc de Titulación · UTET (Electron v0.7.4)
+# Doc de Titulación · UTET (Electron v0.7.5)
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
@@ -36,7 +36,7 @@ Cada estudiante seleccionado recibe un memorando distinto; **ya no se emite un c
 - Siete tipos de fuente: Google, sitios web, repositorios académicos, publicaciones, documentos, trabajos académicos y repositorio institucional ITSQMET.
 - El resultado se clasifica conforme al criterio configurado para este proceso: **menor de 20 %** en rango; **20 % o superior** requiere corrección y una nueva presentación, sin plazo automático. Un índice de similitud no constituye por sí solo evidencia de plagio.
 - La fecha determinista de presentación es el **día 15 del mes siguiente al cierre del período**, trasladada al lunes siguiente si coincide con sábado o domingo. No contempla otros feriados nacionales. La fecha de memorando y del reporte es la misma y permanece constante al corregir.
-- Los registros nuevos incluyen un ejemplo de maquetación con un porcentaje **simulado** entre 0 y 19,99 % y fuentes ilustrativas. La frase larga «DATOS ILUSTRATIVOS · NO CONSTITUYEN UN ANÁLISIS REAL» fue retirada de ambas páginas; **solo en resultados simulados** se mantiene una marca visual discreta «SIMULACIÓN» para evitar confundirlos con mediciones realizadas. Los datos reales no llevan esa marca. La segunda hoja incluye un contexto explicativo antes de las tarjetas; la primera conserva la estructura del memorando.
+- Los registros nuevos incluyen un ejemplo de maquetación con un porcentaje **simulado** entre 0 y 19,99 % y fuentes ilustrativas. La frase larga «DATOS ILUSTRATIVOS · NO CONSTITUYEN UN ANÁLISIS REAL» fue retirada de ambas páginas; **solo en resultados simulados** se incluye una breve nota textual al final del anexo sobre el carácter no verificado del índice y las fuentes; no se imprime ninguna marca de agua sobre las tarjetas, imágenes ni gráficos. Los datos reales no llevan esa marca. La segunda hoja incluye un contexto explicativo antes de las tarjetas; la primera conserva la estructura del memorando.
 - No existe casilla «Verificado», vista previa ni cuadro de confirmación final. La interfaz se mantiene compacta.
 - «PDF individuales» guarda automáticamente los archivos en la carpeta Descargas de Windows sin abrir selectores. «Descargar ZIP» guarda un único ZIP directamente en Descargas. El botón «PDF» junto a un estudiante descarga únicamente ese memorando. Si el nombre existe, añade (1), (2), etc., sin sobrescribir.
 - Los PDF se generan al descargar, **no se guardan en Firebase ni en SQLite**. Reimprimir un memorando sin cambios usa la copia local, no consulta ni escribe en Firebase.
