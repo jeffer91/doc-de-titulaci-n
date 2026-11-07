@@ -31,7 +31,8 @@ function students(count){
   });
 }
 function documentFor(count){
-  const html=M.renderPDF(meta,students(count),label).replaceAll('src="assets/logo-itsqmet.png"',
+  const demo=students(count);
+  const html=(count===1?M.individualHTML({...demo[0],...M.example(demo[0].estudianteId),folio:meta.codigo,fecha:meta.fecha,referencia:'UTET-ANT-2026-11-0001'},meta,label):M.renderPDF(meta,demo,label)).replaceAll('src="assets/logo-itsqmet.png"',
     'src="data:image/png;base64,'+logo+'"');
   const pages=(html.match(/class="inst-page ap-page/g)||[]).length;
   const src='<!doctype html><html lang="es"><head><meta charset="utf-8">'+
