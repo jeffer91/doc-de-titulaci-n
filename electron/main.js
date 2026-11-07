@@ -106,8 +106,6 @@ app.whenReady().then(()=>{
     return Memo.next(app.getPath('userData'),date);
   });
   ipcMain.handle('utet:firebase-students',(event,periodoId)=>{verifySender(event);return Firebase.loadStudents(periodoId);});
-  ipcMain.handle('utet:firebase-login',(event,credentials)=>{verifySender(event);return Firebase.signIn(credentials?.email,credentials?.password);});
-  ipcMain.handle('utet:firebase-logout',(event)=>{verifySender(event);return Firebase.signOut();});
   ipcMain.handle('utet:firebase-status',(event)=>{verifySender(event);return Firebase.status();});
   ipcMain.handle('utet:excel-template',(event,spec)=>{verifySender(event);return Excel.downloadTemplate(event,spec);});
   ipcMain.handle('utet:excel-import',(event,spec)=>{verifySender(event);return Excel.importWorkbook(event,spec);});
