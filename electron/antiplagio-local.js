@@ -93,10 +93,10 @@ function checkStudents(periodoId,students){
  });
 }
 async function replaceFromFirebase(baseDir,periodoId,students,records,time=iso()){
- if(!validPeriod(periodoId)||!Array.isArray(records)||records.length>MAX_ROWS)throw Error('Sincronización inválida.');
+ if(!validPeriod(periodoId)||(records!==null&&(!Array.isArray(records)||records.length>MAX_ROWS)))throw Error('Sincronización inválida.');
  const valid=checkStudents(periodoId,students);
  const remote=[];
- for(const r of records){
+ for(const r of records||[]){
   if(r.periodoId!==periodoId||!validCedula(r.cedula))throw Error('Memorando remoto fuera del período.');
   remote.push({...r,syncStatus:undefined});
  }
@@ -106,6 +106,7 @@ async function replaceFromFirebase(baseDir,periodoId,students,records,time=iso()
   try{for(const s of valid)insert.run([periodoId,s.cedula,s.estudianteId,s.nombres,s.carreraId,s.carreraNombre,s.modalidad,s.sede,s.jornada,s.retirado?1:0]);}
   finally{insert.free();}
   // Sincronización no sobrescribe borradores locales no publicados.
+  if(records!==null){
   const upsert=db.prepare("INSERT INTO memorandos(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'sincronizado',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento, estado=excluded.estado, actualizado_en=excluded.actualizado_en WHERE memorandos.estado='sincronizado'");
   const stamp=iso();
   try{for(const r of remote)upsert.run([periodoId,r.cedula,JSON.stringify(r),stamp]);}finally{upsert.free();}
@@ -114,8 +115,9 @@ async function replaceFromFirebase(baseDir,periodoId,students,records,time=iso()
   const old=prepared(db,"SELECT cedula FROM memorandos WHERE periodo_id=? AND estado='sincronizado'",[periodoId]);
   const remove=db.prepare("DELETE FROM memorandos WHERE periodo_id=? AND cedula=? AND estado='sincronizado'");
   try{for(const r of old)if(!remoteIds.has(r.cedula))remove.run([periodoId,r.cedula]);}finally{remove.free();}
-  db.run('INSERT INTO periodos_sync(periodo_id,sincronizado_en,estudiantes,memorandos) VALUES(?,?,?,?) ON CONFLICT(periodo_id) DO UPDATE SET sincronizado_en=excluded.sincronizado_en,estudiantes=excluded.estudiantes,memorandos=excluded.memorandos',[periodoId,time,valid.length,remote.length]);
-  return {students:valid.length,records:remote.length};
+  }
+  db.run('INSERT INTO periodos_sync(periodo_id,sincronizado_en,estudiantes,memorandos) VALUES(?,?,?,?) ON CONFLICT(periodo_id) DO UPDATE SET sincronizado_en=excluded.sincronizado_en,estudiantes=excluded.estudiantes,memorandos=excluded.memorandos',[periodoId,time,valid.length,records===null?-1:remote.length]);
+  return {students:valid.length,records:records===null?null:remote.length};
  });
  return result;
 }
