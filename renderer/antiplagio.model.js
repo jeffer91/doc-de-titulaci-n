@@ -310,6 +310,7 @@
     if(!['trabajo','articulo'].includes(tipoDocumento))throw Error('Tipo de memorando inválido.');
     const esArticulo=tipoDocumento==='articulo';
     const documento=esArticulo?'artículo académico':'trabajo de titulación';
+    const objeto=esArticulo?'artículo académico':'trabajo';
     const asunto=esArticulo?'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL ARTÍCULO ACADÉMICO':'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL TRABAJO DE TITULACIÓN';
     const n=number(row.similitud),ok=n!==null&&n<20;
     const norm=normalizeCareer(row.carreraNombre,row.modalidad),sourceFlags=row.fuentes||{};
@@ -323,7 +324,7 @@
     const resolution=n===null?'NO DISPONE DE RESULTADO':ok?'CUMPLE CON EL CRITERIO DE SIMILITUD':'NO CUMPLE CON EL CRITERIO DE SIMILITUD';
     const disposition=n===null?'por lo que queda pendiente de revisión':
       ok?'por lo que obtiene un resultado aprobado respecto de este requisito':
-      'por lo que corresponde efectuar las correcciones pertinentes y presentar nuevamente el trabajo para su análisis';
+      'por lo que corresponde efectuar las correcciones pertinentes y presentar nuevamente el '+objeto+' para su análisis';
     const folio=t(row.folio)||t(meta.codigo),fecha=t(row.fecha)||t(meta.fecha);
     const reference=t(row.referencia)||'Pendiente';
     const dataRow=(k,v)=>'<div class="ap-detail"><span>'+E(k)+'</span><strong>'+E(v||'No registrado')+'</strong></div>';
@@ -341,7 +342,7 @@
       '<div class="ap-word-body">'+
         '<p class="ap-word-salutation">De mi consideración:</p>'+
         '<p>Por medio del presente, se notifica el resultado del análisis de similitud correspondiente a su '+E(documento)+', presentado durante el período académico '+E(period)+'.</p>'+
-        '<p>De acuerdo con el reporte de similitud, el trabajo presenta un índice del <strong>'+E(display)+'</strong>, '+E(comparison)+' al límite institucional establecido del 20 %. En consecuencia, se determina que el trabajo <strong>'+E(resolution)+'</strong>, '+E(disposition)+'.</p>'+
+        '<p>De acuerdo con el reporte de similitud, el '+E(objeto)+' presenta un índice del <strong>'+E(display)+'</strong>, '+E(comparison)+' al límite institucional establecido del 20 %. En consecuencia, se determina que el '+E(objeto)+' <strong>'+E(resolution)+'</strong>, '+E(disposition)+'.</p>'+
         '<p>Es importante señalar que el índice de similitud identifica coincidencias textuales con distintas fuentes de información y no constituye, por sí mismo, una determinación de plagio ni implica la aprobación integral del '+E(documento)+'.</p>'+
         '<p>Para efectos de respaldo y seguimiento académico, se adjunta el reporte individual de similitud, que contiene la información académica del estudiante, el resultado obtenido y los datos de identificación del análisis realizado.</p>'+
       '</div>'+
@@ -350,7 +351,7 @@
       footer()+'</section>';
     const second='<section class="inst-page ap-page ap-personal-report ap-word-report">'+logo()+
       '<h1>ANEXO · REPORTE INDIVIDUAL DE SIMILITUD</h1><p class="ap-subtitle">'+E(row.nombres)+' · '+E(reference)+'</p>'+
-      '<div class="ap-word-context"><strong>Contexto del análisis.</strong> El presente anexo amplía el resultado comunicado en el memorando, mediante la identificación académica del estudiante, el índice de similitud registrado y las categorías de fuentes consideradas. Estos indicadores permiten contextualizar las coincidencias y facilitar el seguimiento del trabajo de titulación, sin constituir por sí solos una determinación de plagio.</div>'+
+      '<div class="ap-word-context"><strong>Contexto del análisis.</strong> El presente anexo amplía el resultado comunicado en el memorando, mediante la identificación académica del estudiante, el índice de similitud registrado y las categorías de fuentes consideradas. Estos indicadores permiten contextualizar las coincidencias y facilitar el seguimiento del '+E(documento)+', sin constituir por sí solos una determinación de plagio.</div>'+
       '<div class="ap-personal-card"><h2>1. Información académica</h2><div class="ap-personal-grid">'+
         dataRow('Nombres y apellidos',row.nombres)+dataRow('Cédula',row.cedula)+
         dataRow('Carrera',norm.carrera)+dataRow('Modalidad de estudios',norm.modalidad)+
