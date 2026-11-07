@@ -5,7 +5,7 @@ const {initializeApp,getApps}=require('firebase/app');
 const {getFirestore,doc,runTransaction,getDoc,getDocs,collection,query,where,limit}=require('firebase/firestore');
 const CONFIG={apiKey:'AIzaSyCaHf1C0BB0X_H3BDZ1o-UDAsPmLTjsZLA',authDomain:'utet-4387a.firebaseapp.com',projectId:'utet-4387a',appId:'1:902848131454:web:47f515eb6480834724c32f'};
 const APP='utet-doc-titulacion-memorandos';
-const RECORDS='UTET_antiplagio_memorandos',COUNTERS='UTET_antiplagio_correlativos';
+const RECORDS='UTET_antiplagio_memorandos',COUNTERS='UTET_antiplagio_correlativos',REFCOUNTERS='UTET_antiplagio_referencias';
 let db;
 function firestore(){if(!db){const app=getApps().find(a=>a.name===APP)||initializeApp(CONFIG,APP);db=getFirestore(app);}return db;}
 const periodValid=s=>/^\d{4}-(0[1-9]|1[0-2])__\d{4}-(0[1-9]|1[0-2])$/.test(String(s||''));
@@ -37,23 +37,28 @@ async function list(periodoId){
 }
 async function save(input){
  const record=safeRecord(input),id=key(record.periodoId,record.cedula),month=record.fecha.slice(0,7),database=firestore();
- const recordRef=doc(database,RECORDS,id),counterRef=doc(database,COUNTERS,month);
+ const recordRef=doc(database,RECORDS,id),counterRef=doc(database,COUNTERS,month),referenceRef=doc(database,REFCOUNTERS,month);
  try{return await runTransaction(database,async tx=>{
    const previous=await tx.get(recordRef);
    const existing=previous.exists()?previous.data():null;
    if(existing){
      // Un registro emitido nunca cambia su folio ni su fecha original.
-     const {folio,numero,fecha}=existing;
-     tx.set(recordRef,{...record,fecha,folio,numero,actualizadoEn:new Date().toISOString(),creadoEn:existing.creadoEn||new Date().toISOString()});
-     return {folio,numero,fecha,existing:true};
+     const {folio,numero,fecha,referencia}=existing;
+     tx.set(recordRef,{...record,fecha,folio,numero,referencia,actualizadoEn:new Date().toISOString(),creadoEn:existing.creadoEn||new Date().toISOString()});
+     return {folio,numero,fecha,referencia,existing:true};
    }
    const counter=await tx.get(counterRef);
+   const refCounter=await tx.get(referenceRef);
    const number=(Number(counter.exists()?counter.data().ultimo:0)||0)+1;
    if(!Number.isSafeInteger(number)||number>999999)throw Error('Consecutivo mensual fuera de rango.');
+   const refNumber=(Number(refCounter.exists()?refCounter.data().ultimo:0)||0)+1;
+   if(!Number.isSafeInteger(refNumber)||refNumber>999999)throw Error('Consecutivo de reporte fuera de rango.');
+   const referencia='UTET-ANT-'+month+'-'+String(refNumber).padStart(4,'0');
    const folio=code(number,record.fecha),now=new Date().toISOString();
    tx.set(counterRef,{ultimo:number,actualizadoEn:now});
-   tx.set(recordRef,{...record,folio,numero:number,creadoEn:now,actualizadoEn:now});
-   return {folio,numero:number,fecha:record.fecha,existing:false};
+   tx.set(referenceRef,{ultimo:refNumber,actualizadoEn:now});
+   tx.set(recordRef,{...record,referencia,folio,numero:number,creadoEn:now,actualizadoEn:now});
+   return {folio,numero:number,fecha:record.fecha,referencia,existing:false};
  });}catch(e){return explain(e);}
 }
-module.exports={get,list,save,key,code,safeRecord,dateValid,periodValid,cedulaValid,RECORDS,COUNTERS};
+module.exports={get,list,save,key,code,safeRecord,dateValid,periodValid,cedulaValid,RECORDS,COUNTERS,REFCOUNTERS};
