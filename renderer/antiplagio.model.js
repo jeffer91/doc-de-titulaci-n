@@ -277,16 +277,16 @@
   // Fecha reproducible: día 15 del mes siguiente al cierre del período.
   // Si es sábado o domingo, se mueve al lunes siguiente.
   function periodDate(periodId){
-    if(!/^\\d{4}-\\d{2}__\\d{4}-\\d{2}$/.test(String(periodId)))throw Error('Período inválido.');
+    if(!/^\d{4}-\d{2}__\d{4}-\d{2}$/.test(String(periodId)))throw Error('Período inválido.');
     const [year,month]=periodId.split('__')[1].split('-').map(Number);
     const d=new Date(Date.UTC(year,month,15));
     while(d.getUTCDay()===0||d.getUTCDay()===6)d.setUTCDate(d.getUTCDate()+1);
     return d.toISOString().slice(0,10);
   }
   function normalizeCareer(name,modalidad){
-    let carrera=t(name).replace(/\\bonline\\b/gi,'').replace(/\\s*[-–|()]\\s*$/g,'').replace(/\\s{2,}/g,' ').trim();
+    let carrera=t(name).replace(/\bonline\b/gi,'').replace(/\s*[-–|()]\s*$/g,'').replace(/\s{2,}/g,' ').trim();
     let modo=t(modalidad);
-    if(/\\bonline\\b/i.test(t(name))&&!modo)modo='En línea';
+    if(/\bonline\b/i.test(t(name))&&!modo)modo='En línea';
     return {carrera,modalidad:modo||'No registrada'};
   }
   // Para maquetación solamente. La misma identidad conserva siempre la misma
