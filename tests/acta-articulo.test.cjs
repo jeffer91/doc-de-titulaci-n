@@ -1,0 +1,64 @@
+'use strict';
+const assert=require('node:assert/strict');
+const Dates=require('../electron/acta-articulo-date.js');
+const E=require('../electron/acta-articulo-evidence.js');
+const A=require('../renderer/acta-articulo.model.js');
+const Store=require('../electron/acta-articulo.js');
+const p='2025-10__2026-03',cedula='0105483465';
+const due=Dates.forPeriod(p);
+assert.equal(due.date,'2026-05-29');
+assert.equal(due.documentCode,'AT-ITSQMET-UTET-2026-05');
+assert.equal(due.calendarVerified,true);
+assert.equal(Dates.forPeriod('2026-04__2026-09').date,'2026-11-30');
+assert.equal(Dates.forPeriod('2026-05__2026-10').date,'2026-12-31');
+assert.equal(Dates.forPeriod(p,['2026-05-29']).date,'2026-05-28');
+assert.equal(Dates.allowed(p,new Date('2026-05-25T13:00:00Z')).ready,false);
+assert.equal(Dates.allowed(p,new Date('2026-05-30T13:00:00Z')).ready,true);
+assert.throws(()=>Dates.forPeriod('2025-13__2026-03'),/fuera de rango/);
+assert.equal(Store.numberCode(due,cedula,1),'AA-2026-0105-05-0001');
+assert.equal(Store.numberCode(due,cedula,129),'AA-2026-0105-05-0129');
+const reqValues=Object.fromEntries([...E.REQS,...E.APPROVALS].map(([k])=>[k,'CUMPLE']));
+const requirements={periodoId:p,cedula,valores:reqValues};
+const notas={periodoId:p,cedula,notaArticulo:7,notaDefensa:7,modalidadTitulacion:'ARTICULO_ACADEMICO'};
+const matricula={periodoId:p,cedula,modalidadTitulacion:'ARTICULO_ACADEMICO'};
+const plagio={periodoId:p,cedula,similitud:'20.00',origen:'real'};
+const make=(overrides={})=>E.assess({requisitos:requirements,notas,matricula,antiplagio:plagio,periodoId:p,cedula,...overrides});
+let check=make();
+assert.equal(check.eligible,true,'20.00% es el máximo inclusivo');
+assert.equal(check.requirements.length,9);
+assert.equal(check.approvals.length,2);
+assert.equal(check.checks.articulo,'CUMPLE');
+assert.equal(check.checks.defensa,'CUMPLE');
+assert.equal(make({antiplagio:{...plagio,similitud:'20.01'}}).eligible,false);
+assert.equal(make({antiplagio:{...plagio,origen:'simulado'}}).eligible,false);
+assert.equal(make({notas:{...notas,notaArticulo:6.99}}).eligible,false);
+assert.equal(make({notas:{...notas,notaDefensa:6.99}}).eligible,false);
+assert.equal(make({requisitos:{...requirements,valores:{...reqValues,Ingles:'PENDIENTE'}}}).eligible,false);
+assert.equal(make({notas:null}).eligible,false);
+assert.equal(make({matricula:{...matricula,modalidadTitulacion:'EXAMEN_COMPLEXIVO'},notas:{...notas,modalidadTitulacion:''}}).eligible,false);
+const sample={
+ modalidad:'ARTICULO_ACADEMICO',periodoId:p,cedula,numeroActa:'AA-2026-0105-05-0129',
+ codigoDocumento:due.documentCode,fechaEmision:due.date,fechaRegistro:'2026-11-07',
+ nombre:'ESTUDIANTE DE REFERENCIA',carrera:'DESARROLLO DE SOFTWARE',modalidadEstudios:'En línea',
+ requisitos:check.requirements,aprobaciones:check.approvals,comprobaciones:check.checks
+};
+assert.equal(A.valid(sample),true);
+const html=A.render(sample,'Octubre 2025 a Marzo 2026');
+assert.equal((html.match(/class="aa-page /g)||[]).length,3);
+assert.ok(html.includes('Acta de Titulación por Artículo Académico'));
+assert.ok(html.includes('ELABORADO'));
+assert.ok(html.includes('MSc. Jefferson Villarreal'));
+assert.ok(html.includes('Ing. Martha Tomalá'));
+assert.ok(html.includes('Dr. Alex León T.'));
+assert.ok(html.includes('N.º DE ACTA: AA-2026-0105-05-0129'));
+assert.ok(html.includes('Aprobación del artículo académico'));
+assert.ok(html.includes('Artículo académico · mínimo 7/10 acreditado'));
+assert.ok(html.includes('Similitud · máximo 20,00 % acreditado'));
+assert.ok(!html.includes('notaArticulo'));
+assert.ok(!html.includes('7,00'),'La calificación numérica del estudiante no se imprime');
+assert.ok(html.includes('Página 3 de 3'));
+assert.ok(html.includes('AT-ITSQMET-UTET-2026-05'));
+assert.throws(()=>A.render({...sample,aprobaciones:[{label:'Aprobación',status:'PENDIENTE'}]},'Período'),/no se puede generar/i);
+assert.ok(!A.valid({...sample,comprobaciones:{...check.checks,similitud:'NO CUMPLE'}}));
+assert.equal(A.filename(sample),'ACTA_AA_0105483465_AA-2026-0105-05-0129.pdf');
+console.log('OK Acta AA: fechas, 20% inclusivo, 9 requisitos, 2 aprobaciones, notas no impresas y 3 hojas.');
