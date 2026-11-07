@@ -8,7 +8,8 @@
     {key:'repositorios',label:'Repositorios académicos',symbol:'R'},
     {key:'publicaciones',label:'Publicaciones',symbol:'P'},
     {key:'documentos',label:'Documentos',symbol:'D'},
-    {key:'trabajos',label:'Trabajos académicos',symbol:'T'}
+    {key:'trabajos',label:'Trabajos académicos',symbol:'T'},
+    {key:'institucional',label:'Repositorio institucional ITSQMET',symbol:'I'}
   ];
   const E=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const t=x=>String(x==null?'':x).trim();
@@ -106,7 +107,8 @@
     repositorios:'<svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5-10-5Zm4 3v5c4 4 8 4 12 0v-5M22 9v8"/></svg>',
     publicaciones:'<svg viewBox="0 0 24 24"><path d="M12 6c-4-3-7-3-10-2v15c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-6-1-10 2Zm0 0v15"/></svg>',
     documentos:'<svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6V2Zm9 0v5h5M9 12h8M9 16h8"/></svg>',
-    trabajos:'<svg viewBox="0 0 24 24"><path d="M8 4h11v16H8zM5 8H3v14h12v-2M11 9h5M11 13h5"/></svg>'
+    trabajos:'<svg viewBox="0 0 24 24"><path d="M8 4h11v16H8zM5 8H3v14h12v-2M11 9h5M11 13h5"/></svg>',
+    institucional:'<svg viewBox="0 0 24 24"><path d="M3 21V7l9-5 9 5v14M7 21v-8h10v8M3 9h18M10 6h4"/></svg>'
   };
   const glyph=key=>glyphs[key]||'';
   const spans=(s)=>SOURCE_TYPES.filter(k=>s?.[k.key]==='detected'||s?.[k.key]==='not-detected')
@@ -271,7 +273,95 @@
       '<span>Página '+(i+1)+' de '+pages.length+'</span></footer></section>').join('');
     return '<div class="institutional-document inst-antiplagio">'+html+'</div>';
   }
+
+  // Fecha reproducible: día 15 del mes siguiente al cierre del período.
+  // Si es sábado o domingo, se mueve al lunes siguiente.
+  function periodDate(periodId){
+    if(!/^\\d{4}-\\d{2}__\\d{4}-\\d{2}$/.test(String(periodId)))throw Error('Período inválido.');
+    const [year,month]=periodId.split('__')[1].split('-').map(Number);
+    const d=new Date(Date.UTC(year,month,15));
+    while(d.getUTCDay()===0||d.getUTCDay()===6)d.setUTCDate(d.getUTCDate()+1);
+    return d.toISOString().slice(0,10);
+  }
+  function normalizeCareer(name,modalidad){
+    let carrera=t(name).replace(/\\bonline\\b/gi,'').replace(/\\s*[-–|()]\\s*$/g,'').replace(/\\s{2,}/g,' ').trim();
+    let modo=t(modalidad);
+    if(/\\bonline\\b/i.test(t(name))&&!modo)modo='En línea';
+    return {carrera,modalidad:modo||'No registrada'};
+  }
+  // Para maquetación solamente. La misma identidad conserva siempre la misma
+  // muestra; nunca se registra como medición real de un trabajo académico.
+  function example(studentId){
+    const seed=t(studentId);
+    let h=2166136261;
+    for(let i=0;i<seed.length;i++)h=Math.imul(h^seed.charCodeAt(i),16777619)>>>0;
+    const n=(h%2000)/100;
+    const sources={};
+    SOURCE_TYPES.forEach((s,i)=>{
+      const eligible=n>0&&((h>>>((i*3)%24))%100)<Math.min(92,14+n*3);
+      sources[s.key]=eligible?'detected':'not-detected';
+    });
+    if(n>0&&!Object.values(sources).includes('detected'))sources.google='detected';
+    return {similitud:n.toFixed(2),fuentes:sources,origen:'simulado'};
+  }
+  function individualHTML(row,meta,period){
+    const n=number(row.similitud),ok=n!==null&&n<20;
+    const norm=normalizeCareer(row.carreraNombre,row.modalidad),sourceFlags=row.fuentes||{};
+    const values=SOURCE_TYPES.map(x=>({label:x.label,active:sourceFlags[x.key]==='detected',state:sourceFlags[x.key]||'unknown'}));
+    const ratio=n===null?0:n;
+    const display=pformat(row.similitud);
+    const result=n===null?'SIN RESULTADO':ok?'APROBADO':'NO APROBADO';
+    const conclusion=n===null?'No se dispone de un resultado para emitir una conclusión.':
+       ok?'El índice registrado se encuentra por debajo del límite del 20 % establecido para este proceso. En consecuencia, cumple el criterio de similitud aplicado.':
+       'El índice registrado alcanza o supera el 20 % establecido para este proceso. El trabajo no cumple el criterio de similitud aplicado; corresponde realizar las correcciones pertinentes y presentar nuevamente el trabajo para un nuevo análisis, sin plazo especificado.';
+    const demo=row.origen==='simulado';
+    const folio=t(row.folio)||t(meta.codigo);
+    const fecha=t(row.fecha)||t(meta.fecha);
+    const reference=t(row.referencia)||'Pendiente';
+    const dataRow=(k,v)=>'<div class="ap-detail"><span>'+E(k)+'</span><strong>'+E(v||'No registrado')+'</strong></div>';
+    const header=()=>'<header class="ap-memo-header"><img src="assets/logo-itsqmet.png" alt="ITSQMET"><span>UNIDAD DE TITULACIÓN Y EFICIENCIA TERMINAL</span></header>';
+    const signature='<div class="ap-signature"><p>Atentamente,</p><div class="ap-sign-space"></div><strong>MSc. Jefferson Edgar Villarreal Enríquez</strong><span>COORDINADOR DE TITULACIÓN</span></div>';
+    const footer=i=>'<footer class="ap-footer"><span>ITSQMET · UTET · Notificación individual de similitud</span><span>Página '+i+' de 2</span></footer>';
+    const demonstration=demo?'<p class="ap-demo-label">DATOS ILUSTRATIVOS · NO CONSTITUYEN UN ANÁLISIS REAL</p>':'';
+    const first='<section class="inst-page ap-page ap-personal-page">'+header()+
+      '<h1 class="ap-memo-title">No. '+E(folio)+'</h1>'+
+      '<table class="ap-memo-fields"><tbody>'+
+      '<tr><th>PARA</th><td>'+E(row.nombres)+'<br>Estudiante</td></tr>'+
+      '<tr><th>DE</th><td>MSc. Jefferson Edgar Villarreal Enríquez<br>Coordinador de Titulación</td></tr>'+
+      '<tr><th>ASUNTO</th><td>Notificación del resultado de similitud del trabajo de titulación</td></tr>'+
+      '<tr><th>FECHA</th><td>'+E(day(fecha))+'</td></tr></tbody></table>'+
+      '<p class="ap-intro">De mi consideración: Por medio del presente, se comunica el resultado del análisis de similitud correspondiente a su trabajo de titulación.</p>'+
+      demonstration+
+      '<div class="ap-personal-card"><h2>1. Información académica</h2><div class="ap-personal-grid">'+
+      dataRow('Nombres y apellidos',row.nombres)+dataRow('Cédula',row.cedula)+dataRow('Carrera',norm.carrera)+
+      dataRow('Modalidad de estudios',norm.modalidad)+dataRow('Período académico',period)+
+      (row.sede?dataRow('Sede',row.sede):'')+(row.jornada?dataRow('Jornada',row.jornada):'')+
+      '</div></div>'+
+      '<div class="ap-personal-card"><h2>2. Resultado de similitud</h2><div class="ap-personal-score"><div><strong>'+E(display)+'</strong><span>Índice de similitud</span></div><div class="'+(ok?'ap-status-approved':'ap-status-rejected')+'">'+E(result)+'</div></div>'+
+      '<div class="ap-track"><span class="ap-fill" style="width:'+ratio+'%"></span></div><p class="ap-caption">Criterio aplicado: menor de 20 %.</p></div>'+
+      '<div class="ap-personal-card"><h2>3. Fuentes y referencia</h2><div class="ap-personal-grid">'+
+      dataRow('Herramienta','Sistema institucional de antiplagio')+
+      dataRow('Referencia del reporte',reference)+dataRow('Fecha del reporte',day(fecha))+
+      dataRow('Categorías con coincidencias',String(values.filter(x=>x.active).length)+' de '+values.length)+
+      '</div></div>'+
+      '<div class="ap-conclusion"><strong>Conclusión</strong><p>'+E(conclusion)+'</p></div>'+signature+footer(1)+'</section>';
+    const second='<section class="inst-page ap-page ap-personal-report">'+header()+
+      '<h1>DETALLE INDIVIDUAL DE SIMILITUD</h1><p class="ap-subtitle">'+E(row.nombres)+' · '+E(reference)+'</p>'+demonstration+
+      '<h2>Indicadores generales</h2>'+
+      '<div class="ap-personal-score"><div><strong>'+E(display)+'</strong><span>Índice de similitud</span></div><div class="'+(ok?'ap-status-approved':'ap-status-rejected')+'">'+E(result)+'</div></div>'+
+      '<div class="ap-track ap-long-track"><span class="ap-fill" style="width:'+ratio+'%"></span></div>'+
+      '<div class="ap-personal-card"><h2>Distribución porcentual</h2>'+
+      '<div class="ap-share"><div class="ap-donut" style="--ap-value:'+ratio+'%"><span>'+E(display)+'</span></div>'+
+      '<p>Índice de similitud registrado sobre el total del trabajo analizado. El porcentaje no demuestra, por sí solo, plagio.</p></div></div>'+
+      '<h2>Fuentes consideradas</h2>'+
+      '<div class="ap-personal-sources">'+values.map(v=>'<div><span class="ap-source-dot '+(v.active?'active':'')+'"></span><strong>'+E(v.label)+'</strong><span>'+E(v.state==='detected'?'Coincidencia':v.state==='not-detected'?'Sin coincidencia':'Sin información')+'</span></div>').join('')+'</div>'+
+      '<p class="ap-caption">Las fuentes son indicadores de coincidencia, no porcentajes sumables. La clasificación académica se realiza según el índice general y el criterio institucional.</p>'+
+      '<div class="ap-personal-card"><h2>Identificación del análisis</h2><div class="ap-personal-grid">'+dataRow('Memorando',folio)+dataRow('Referencia',reference)+dataRow('Fecha',day(fecha))+dataRow('Condición',result)+'</div></div>'+
+      footer(2)+'</section>';
+    return '<div class="institutional-document inst-antiplagio">'+first+second+'</div>';
+  }
+
   root.UTET_ANTIPLAGIO_MODEL=Object.freeze({
-    SOURCE_TYPES,E,number,pformat,day,createRow,rowState,validate,group,summary,renderPDF,escapeFilename
+    SOURCE_TYPES,E,number,pformat,day,createRow,rowState,validate,group,summary,renderPDF,escapeFilename,periodDate,normalizeCareer,example,individualHTML
   });
 })(typeof window!=='undefined'?window:globalThis);
