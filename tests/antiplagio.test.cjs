@@ -88,7 +88,7 @@ async function testFirebase(){
         {found:doc('Estudiante','0102030406',{cedula:'0102030406',nombres:'Juan',apellidos:'López'})}
       ];
     }else throw Error('Consulta inesperada');
-    return {ok:true,status:200,text:async()=>JSON.stringify(data)};
+    return {ok:true,status:200,text:async()=>String(url).includes('batchGet')?data.map(x=>JSON.stringify(x)).join('\n'):JSON.stringify(data)};
   };
   try{
     const result=await firebase.loadStudents(p);
