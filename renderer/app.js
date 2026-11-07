@@ -123,7 +123,7 @@
   function render() {
     $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button type="button" class="nav-button ${state.view===id||((state.view==='editor'||state.view==='records')&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-text">${escape(title)}</span></button>`).join('');
     $('period-select').innerHTML=DATA.periodos.map(p=>`<option value="${escape(p.id)}" ${p.id===state.periodId?'selected':''}>${escape(p.label)}</option>`).join('');
-    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,records:()=>recordsUI.render(),antiplagio:()=>antiplagioUI.render(),editor:renderEditor};
+    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,records:()=>recordsUI.render(),antiplagio:()=>antiplagioUI.render(),'acta-articulo':()=>actaUI.render(),editor:renderEditor};
     $('app-content').innerHTML=(contents[state.view]||renderInicio)();
     window.scrollTo(0,0);
   }
@@ -141,6 +141,7 @@
     const target=event.target.closest('button[data-action], button[data-nav]');if(!target)return;
     if(target.dataset.nav){state.proceso='todos';go(target.dataset.nav);return;}
     const a=target.dataset.action,id=target.dataset.id;
+    if(actaUI.handleAction(a,id))return;
     if(antiplagioUI.handleAction(a,id))return;
     if(recordsUI.handleAction(a,id))return;
     if(a==='go-documents'){state.proceso='todos';state.requisito='todos';go('documentos');}
@@ -152,10 +153,11 @@
     else if(a==='req-pick'){state.selectedReq=id;go('requisitos');}
     else if(a==='filter-req-docs'){state.proceso='todos';state.requisito=id;go('documentos');}
     else if(a==='select-period'){
-      const onAntiplagio=state.view==='antiplagio',changed=state.periodId!==id;
+      const onAntiplagio=state.view==='antiplagio',onActa=state.view==='acta-articulo',changed=state.periodId!==id;
       state.periodId=id;state.proceso='todos';state.requisito='todos';
       if(onAntiplagio && changed)antiplagioUI.onPeriodChange();
-      else{antiplagioUI.reset();go('inicio');}
+      else if(onActa && changed)actaUI.onPeriodChange();
+      else{antiplagioUI.reset();actaUI.reset();go('inicio');}
       showToast('Período actualizado');
     }
     else if(a==='new-doc')newDocument(id);
@@ -183,17 +185,19 @@
     }catch(err){showToast('No fue posible exportar el PDF: '+(err?.message||'Error'));}
   }
   $('period-select').addEventListener('change', e => {
-    const next=e.target.value,changed=state.periodId!==next,onAntiplagio=state.view==='antiplagio';
+    const next=e.target.value,changed=state.periodId!==next,onAntiplagio=state.view==='antiplagio',onActa=state.view==='acta-articulo';
     if(!changed)return;
     state.periodId=next;state.draft=null;state.proceso='todos';state.requisito='todos';
     if(onAntiplagio)antiplagioUI.onPeriodChange();
-    else{antiplagioUI.reset();go('inicio');}
+    else if(onActa)actaUI.onPeriodChange();
+    else{antiplagioUI.reset();actaUI.reset();go('inicio');}
     showToast('Período actualizado');
   });
   document.addEventListener('click',handleClick);
   $('app-content').addEventListener('change',e=>{
     recordsUI.input(e);
     antiplagioUI.input(e);
+    actaUI.input(e);
     if(e.target.id==='filter-process'){state.proceso=e.target.value;render();}
     if(e.target.id==='filter-requirement'){state.requisito=e.target.value;render();}
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
@@ -207,5 +211,6 @@
   function refreshPreview(){const el=$('print-preview');if(el&&state.draft)el.innerHTML=previewHTML(state.draft);const v=$('institutional-validation');if(v&&state.draft)v.innerHTML=validationHTML(state.draft,typeById(state.draft.tipoId));}
   const recordsUI=window.UTET_RECORD_UI.create({data:DATA,records:window.UTET_RECORDS,state,period,getType:typeById,go,render,draftDefault,showToast,logAction});
   const antiplagioUI=window.UTET_ANTIPLAGIO.create({state,period,go,render,showToast});
+  const actaUI=window.UTET_ACTA_ARTICULO.create({state,period,go,render,showToast});
   render();
 })();
