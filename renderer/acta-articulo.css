@@ -21,7 +21,10 @@
 .aa-cover h2{font-size:20.5pt;line-height:1.22;margin:0}
 .aa-signatures{position:absolute;left:10mm;right:10mm;bottom:19mm;width:calc(100% - 20mm);border-collapse:collapse;table-layout:fixed;font-size:8pt}
 .aa-signatures th,.aa-signatures td{border:1px solid #333;text-align:center;padding:1.3mm .7mm;line-height:1.2}
-.aa-signatures th{font-weight:700}
+.aa-signatures th{font-weight:700;border-bottom:0}
+/* Espacio de firma unido visualmente al título: sin raya horizontal debajo
+   de ELABORADO, REVISADO y APROBADO; se conserva la línea de firma inferior. */
+.aa-signatures tbody .aa-signature-space td{border-top:0}
 .aa-signatures .aa-signature-space{height:17mm}
 .aa-signatures tr:last-child td{font-size:7.5pt}
 .aa-constancia{display:flex;flex-direction:column;gap:2mm;background:#eff5fa;border-left:3mm solid #285b85;padding:3mm 4mm;margin:0 0 4mm;font-size:10.2pt;color:#244a69}
