@@ -43,12 +43,18 @@ function classify(name,head,activities){
 }
 function group(name,heading){
  const s=norm(name+' '+heading);
+ // Conservar número de subgrupo: "Universitarias 1" y "Universitarias 2"
+ // son cronogramas diferentes y requieren anexos diferenciados.
+ const uniNumber=/universitari(?:as|os|a|o)?\s*(\d+)\b/.exec(s);
+ if(uniNumber)return 'Universitarios '+uniNumber[1];
+ const supNumber=/superior(?:es)?\s*(\d+)\b/.exec(s);
+ if(supNumber)return 'Superiores '+supNumber[1];
  if(/universitari|\b(?:uni|u)\b/.test(s))return 'Universitarios';
  if(/superior|\b(?:sup|s)\b/.test(s))return 'Superiores';
  return 'Por determinar';
 }
 function periodFrom(x){
- const cleaned=text(x).replace(/\s*:{2,}\s*/g,' - ').replace(/\s+[-–—]\s+(universitarios?|superiores?)(\s*\d+)?\s*$/i,'').trim();
+ const cleaned=text(x).replace(/\s*:{2,}\s*/g,' - ').replace(/\s+[-–—]\s+(?:universitari(?:os|as|o|a)|superior(?:es)?)(?:\s*\d+)?\s*$/i,'').trim();
  return cleaned.replace(/^\s*(cronograma\s*(de\s*)?(art[ií]culo\s*(acad[eé]mico)?)?)\s*[-:]?\s*/i,'').trim();
 }
 function parseSheet(ws,filename,date1904){

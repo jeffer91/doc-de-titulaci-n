@@ -29,6 +29,8 @@
     if(/clase|metodolog[ií]a|refuerzo|requisito/.test(s))return 'Clases';
     return 'Actividades académicas';
   }
+  const periodKey=s=>trim(s,150).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+    .replace(/[–—]/g,'-').replace(/\s+/g,' ').trim();
   function validate(raw){
     if(!raw||typeof raw!=='object')throw Error('Faltan los datos del memorando.');
     const fecha=trim(raw.fecha,10),id=trim(raw.id,120),periodo=trim(raw.periodo,150);
@@ -39,7 +41,9 @@
     let count=0;
     const cronogramas=raw.cronogramas.map((item,index)=>{
       const grupo=trim(item.grupo,100),hoja=trim(item.hoja,100);
-      if(!grupo)throw Error('Indica el grupo del anexo '+(index+1)+'.');
+      if(!grupo||/^por determinar$/i.test(grupo))throw Error('Indica el grupo real del anexo '+(index+1)+' antes de emitir.');
+      const sourcePeriod=trim(item.periodo,150);
+      if(sourcePeriod&&periodKey(sourcePeriod)!==periodKey(periodo))throw Error('El período del anexo '+(index+1)+' ('+grupo+') no coincide con el período del memorando. Revisa ambos.');
       if(!Array.isArray(item.actividades)||!item.actividades.length||item.actividades.length>250)throw Error('Cronograma sin actividades válidas o demasiado grande: '+grupo);
       const actividades=item.actividades.map((a,i)=>{
         const actividad=trim(a.actividad,350),inicio=trim(a.inicio,10),fin=trim(a.fin,10);

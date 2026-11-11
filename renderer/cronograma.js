@@ -22,7 +22,7 @@ window.UTET_CRONOGRAMA_UI=Object.freeze({create:function(ctx){
   const labels=[...new Set(picks.map(x=>String(x.periodo||'').trim().toLowerCase()).filter(Boolean))];
   if(labels.length>1)throw Error('Seleccionaste cronogramas de distintos períodos. Genera un memorando por período.');
   return Model.validate({id:memo.id,fecha:memo.fecha,periodo:memo.periodo,cronogramas:picks.map(x=>({
-   grupo:x.grupo,hoja:x.sheetName,actividades:x.actividades
+   grupo:x.grupo,hoja:x.sheetName,periodo:x.periodo,actividades:x.actividades
   }))});
  }
  const btn=(a,t,cls='btn',extra='')=>'<button type="button" class="'+cls+'" data-action="'+a+'" '+extra+'>'+t+'</button>';
@@ -72,9 +72,16 @@ window.UTET_CRONOGRAMA_UI=Object.freeze({create:function(ctx){
   try{
    const res=await window.utetDesktop.importCronogramaFiles();if(res.canceled)return;
    let added=0,duplicates=0;
+   // En libros con muchos períodos, seleccionar inicialmente solo el primero
+   // y sus grupos; nunca todos los períodos en un único memorando.
+   const alreadySelected=selected().length>0;
+   const firstNew=res.sheets.find(x=>x.tipo==='articulo'&&x.actividades?.length&&x.periodo);
+   const autoPeriod=firstNew?.periodo||'';
    for(const item of res.sheets){
     if(sheets.some(x=>x.fileName===item.fileName&&x.sheetName===item.sheetName&&x.periodo===item.periodo)){duplicates++;continue;}
-    sheets.push({...item,uid:nextId()});added++;
+    const autoSelect=!alreadySelected&&item.tipo==='articulo'&&!!item.actividades?.length&&
+      !!autoPeriod&&String(item.periodo||'').trim().toLowerCase()===String(autoPeriod).trim().toLowerCase();
+    sheets.push({...item,selected:autoSelect,uid:nextId()});added++;
    }
    if(sheets.length>60){sheets=sheets.slice(0,60);showToast('Se alcanzó el límite de 60 hojas.');}
    const first=selected()[0];
@@ -148,6 +155,12 @@ window.UTET_CRONOGRAMA_UI=Object.freeze({create:function(ctx){
    changed();sheets[active].actividades[i][key]=t.value;persist();
   }
  }
- function onPeriodChange(){memo={...memo,periodo:period().label,id:nextId(),folio:''};showPreview=false;persist();render();}
+ function onPeriodChange(){
+  // La selección del período institucional no puede reutilizar en silencio
+  // anexos de un período anterior.
+  sheets.forEach(x=>{x.selected=false;});
+  memo={...memo,periodo:period().label,id:nextId(),folio:''};
+  showPreview=false;persist();render();
+ }
  return {render:view,handleAction:action,input,onPeriodChange};
 }});
