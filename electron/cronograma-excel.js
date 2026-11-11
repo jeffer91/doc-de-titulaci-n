@@ -35,7 +35,7 @@ function excelDate(value,date1904=false){
 }
 function classify(name,head,activities){
  const s=norm([name,head].join(' '));
- if(/complexiv|nucleo|examen complexiv/.test(s))return 'complexivo';
+ if(/complexiv|complex\b|nucleo|examen complexiv/.test(s)||activities.some(a=>/complexiv|nucleo/.test(norm(a.actividad))))return 'complexivo';
  if(/trabajo de titulaci|redaccion eficiente de tesis/.test(s))return 'trabajo';
  if(/articulo|universitari|superior|may nov|nov may|feb agos|agos ene|jun dic|ene sept/.test(s))return 'articulo';
  if(activities.some(a=>/articulo|metodologia|interrogante de investigacion/i.test(norm(a.actividad))))return 'articulo';
