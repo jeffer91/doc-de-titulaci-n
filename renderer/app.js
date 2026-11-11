@@ -123,7 +123,7 @@
   function render() {
     $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button type="button" class="nav-button ${state.view===id||((state.view==='editor'||state.view==='records')&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-text">${escape(title)}</span></button>`).join('');
     $('period-select').innerHTML=DATA.periodos.map(p=>`<option value="${escape(p.id)}" ${p.id===state.periodId?'selected':''}>${escape(p.label)}</option>`).join('');
-    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,records:()=>recordsUI.render(),antiplagio:()=>antiplagioUI.render(),'acta-articulo':()=>actaUI.render(),editor:renderEditor};
+    const contents={inicio:renderInicio,procesos:renderInicio,periodos:renderPeriodos,documentos:renderDocumentos,requisitos:renderRequisitos,estudiantes:renderEstudiantes,historial:renderHistorial,configuracion:renderConfiguracion,records:()=>recordsUI.render(),antiplagio:()=>antiplagioUI.render(),'acta-articulo':()=>actaUI.render(),cronograma:()=>cronUI.render(),editor:renderEditor};
     $('app-content').innerHTML=(contents[state.view]||renderInicio)();
     window.scrollTo(0,0);
   }
@@ -143,6 +143,7 @@
     const a=target.dataset.action,id=target.dataset.id;
     if(actaUI.handleAction(a,id))return;
     if(antiplagioUI.handleAction(a,id))return;
+    if(cronUI.handleAction(a,id))return;
     if(recordsUI.handleAction(a,id))return;
     if(a==='go-documents'){state.proceso='todos';state.requisito='todos';go('documentos');}
     else if(a==='go-requirements')go('requisitos');
@@ -153,14 +154,15 @@
     else if(a==='req-pick'){state.selectedReq=id;go('requisitos');}
     else if(a==='filter-req-docs'){state.proceso='todos';state.requisito=id;go('documentos');}
     else if(a==='select-period'){
-      const onAntiplagio=state.view==='antiplagio',onActa=state.view==='acta-articulo',changed=state.periodId!==id;
+      const onAntiplagio=state.view==='antiplagio',onActa=state.view==='acta-articulo',onCronograma=state.view==='cronograma',changed=state.periodId!==id;
       state.periodId=id;state.proceso='todos';state.requisito='todos';
       if(onAntiplagio && changed)antiplagioUI.onPeriodChange();
       else if(onActa && changed)actaUI.onPeriodChange();
+      else if(onCronograma && changed)cronUI.onPeriodChange();
       else{antiplagioUI.reset();actaUI.reset();go('inicio');}
       showToast('Período actualizado');
     }
-    else if(a==='new-doc')newDocument(id);
+    else if(a==='new-doc'){if(id==='cron-articulo')go('cronograma');else newDocument(id);}
     else if(a==='edit-doc'){const d=state.documents.find(x=>x.id===id);if(d){state.draft=INST.normalize({...d},typeById(d.tipoId));go('editor');}}
     else if(a==='save-doc')saveEditor();
     else if(a==='review-doc')saveEditor('En revisión');
@@ -185,16 +187,18 @@
     }catch(err){showToast('No fue posible exportar el PDF: '+(err?.message||'Error'));}
   }
   $('period-select').addEventListener('change', e => {
-    const next=e.target.value,changed=state.periodId!==next,onAntiplagio=state.view==='antiplagio',onActa=state.view==='acta-articulo';
+    const next=e.target.value,changed=state.periodId!==next,onAntiplagio=state.view==='antiplagio',onActa=state.view==='acta-articulo',onCronograma=state.view==='cronograma';
     if(!changed)return;
     state.periodId=next;state.draft=null;state.proceso='todos';state.requisito='todos';
     if(onAntiplagio)antiplagioUI.onPeriodChange();
     else if(onActa)actaUI.onPeriodChange();
+    else if(onCronograma)cronUI.onPeriodChange();
     else{antiplagioUI.reset();actaUI.reset();go('inicio');}
     showToast('Período actualizado');
   });
   document.addEventListener('click',handleClick);
   $('app-content').addEventListener('change',e=>{
+    cronUI.input(e);
     recordsUI.input(e);
     antiplagioUI.input(e);
     actaUI.input(e);
@@ -203,6 +207,7 @@
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
   });
   $('app-content').addEventListener('input',e=>{
+    cronUI.input(e);
     recordsUI.input(e);
     antiplagioUI.input(e);
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
@@ -212,5 +217,6 @@
   const recordsUI=window.UTET_RECORD_UI.create({data:DATA,records:window.UTET_RECORDS,state,period,getType:typeById,go,render,draftDefault,showToast,logAction});
   const antiplagioUI=window.UTET_ANTIPLAGIO.create({state,period,go,render,showToast});
   const actaUI=window.UTET_ACTA_ARTICULO.create({state,period,go,render,showToast});
+  const cronUI=window.UTET_CRONOGRAMA_UI.create({state,period,go,render,showToast,logAction});
   render();
 })();

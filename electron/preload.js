@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('utetDesktop', Object.freeze({
   antiplagioFirebaseStatus: () => ipcRenderer.invoke('utet:firebase-status'),
   downloadExcelTemplate: spec => ipcRenderer.invoke('utet:excel-template', spec),
   importExcel: spec => ipcRenderer.invoke('utet:excel-import', spec),
+  importCronogramaFiles: () => ipcRenderer.invoke('utet:cronograma-import'),
+  exportCronogramaPDF: data => ipcRenderer.invoke('utet:cronograma-export',data),
   getAntiplagioRecords: (periodoId,tipo='trabajo') => ipcRenderer.invoke('utet:antiplagio-list',periodoId,tipo),
   saveAntiplagioRecord: record => ipcRenderer.invoke('utet:antiplagio-save',record),
   exportAntiplagioFiles: spec => ipcRenderer.invoke('utet:antiplagio-export',spec),

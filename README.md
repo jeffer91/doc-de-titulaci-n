@@ -116,6 +116,16 @@ Los dos consecutivos se asignan en una **transacción de Firestore**, para evita
 
 No se ha verificado desde el código que las reglas de Firebase institucional permitan escribir estas tres colecciones; hay que validar la operación real en un entorno autorizado antes de usarla con estudiantes.
 
+## PRO-57 · Cronograma de Artículo Académico (Memorando)
+
+La entrada **Gestión de artículo académico → Cronograma de Artículo Académico → Datos** abre un módulo propio. Permite cargar simultáneamente hasta 15 archivos Excel `.xlsx`, con varias hojas por archivo. Detecta las columnas **Actividad / Fecha inicio / Fecha fin** aunque la fila de títulos no sea la primera, convierte fechas Excel, reconoce el período y el grupo desde los encabezados y admite correcciones manuales de grupo, fechas, etapas y actividades. El importador identifica hojas de Complexivo/Trabajo de Titulación y las excluye del documento PRO-57; los duplicados por archivo, hoja y período se omiten. Los borradores se guardan en el almacenamiento local del perfil de la aplicación; los Excel originales no se modifican.
+
+El memorando PDF es A4: primera página con membrete, campos PARA/DE/ASUNTO/FECHA, texto institucional y espacio de firma; anexos independientes por grupo con contexto, fechas límite, etapas y tabla de actividades. Se admiten varios anexos del **mismo período** en un único memorando. Puede requerir varias páginas por grupo cuando el cronograma es extenso; la vista previa no reserva un número.
+
+**Folio solicitado:** `Memorando No. MEM-ITSQMET-UTET-AAAA-MM-NN`. `NN` es el consecutivo del **mes de emisión**, no el número del día ni el mes del período académico; crece a 3 dígitos si fuera necesario. La emisión requiere Firestore con permisos institucionales y reserva el correlativo en `UTET_antiplagio_correlativos/<AAAA-MM>` para compartir la secuencia con los memorandos de similitud gestionados en Firebase. El contenido original se conserva en `UTET_cronograma_memorandos/<id>`, y reimprimir el mismo ID conserva el folio y la versión emitida. Los memorandos históricos cuya numeración es **solo local** no están centralizados: deben conciliase con control documental antes del uso institucional. Si Firebase deniega la escritura, no se inventa una emisión oficial.
+
+La aplicación **no envía mensajes automáticamente por Telegram ni publica en la web institucional**; esas actuaciones y sus evidencias deben registrarse fuera del módulo hasta implementar integraciones autorizadas.
+
 ## Inicio y comprobaciones
 
 Requiere Node.js 20 o posterior.

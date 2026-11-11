@@ -4,6 +4,9 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const Excel = require('./excel.js');
+const CronExcel = require('./cronograma-excel.js');
+const CronNumbers = require('./cronograma-numbering.js');
+const CronModel = require('../renderer/cronograma.model.js');
 const Firebase = require('./firebase-read.js');
 const Memo = require('./memo-numbering.js');
 const AntiplagioStore = require('./antiplagio-store.js');
@@ -51,7 +54,7 @@ function verifySender(event) {
 async function createPrintHTML(documentMarkup,kind='a4') {
   const [css, extraCss, asset, memoFooterSVG] = await Promise.all([
     fs.readFile(path.join(RENDERER,'institutional.css'),'utf8'),
-    fs.readFile(path.join(RENDERER,kind==='acta'?'acta-articulo.css':'antiplagio.css'),'utf8'),
+    fs.readFile(path.join(RENDERER,kind==='acta'?'acta-articulo.css':kind==='cronograma'?'cronograma.css':'antiplagio.css'),'utf8'),
     fs.readFile(path.join(RENDERER,'assets','logo-itsqmet.png')),
     fs.readFile(path.join(RENDERER,'assets','memorando-pie-itsqmet.svg'),'utf8')
   ]);
@@ -113,6 +116,45 @@ async function savePDF(event, input) {
   }
 }
 
+
+
+async function exportCronogramaPDF(event,input){
+ verifySender(event);
+ // Todas las fechas y actividades se validan de nuevo del lado de Electron.
+ const data=CronModel.validate(input);
+ const owner=BrowserWindow.fromWebContents(event.sender);
+ const suggested='Memorando_MEM-ITSQMET-UTET-'+data.fecha.slice(0,7)+'_Cronograma_Articulo.pdf';
+ const {canceled,filePath}=await dialog.showSaveDialog(owner,{
+  title:'Emitir memorando de cronograma de artículo académico',defaultPath:suggested,
+  filters:[{name:'Archivo PDF',extensions:['pdf']}]
+ });
+ if(canceled||!filePath)return {canceled:true};
+ // Numerar solo después de que el usuario elija dónde guardar.
+ // Firebase conserva el contenido emitido; las reimpresiones mantienen el folio.
+ const issued=await CronNumbers.issue(data);
+ const html=CronModel.render(issued.documento,issued.folio);
+ if(html.length>MAX_HTML)throw Error('Memorando demasiado extenso para imprimir.');
+ const printer=new BrowserWindow({show:false,webPreferences:{
+  sandbox:true,nodeIntegration:false,contextIsolation:true,javascript:false,
+  webSecurity:true,images:true
+ }});
+ let temporaryDirectory=null;
+ try{
+  temporaryDirectory=await fs.mkdtemp(path.join(os.tmpdir(),'utet-cronograma-'));
+  const temporaryFile=path.join(temporaryDirectory,'documento.html');
+  await fs.writeFile(temporaryFile,await createPrintHTML(html,'cronograma'),{encoding:'utf8',mode:0o600});
+  await printer.loadFile(temporaryFile);
+  const pdf=await printer.webContents.printToPDF({
+   printBackground:true,preferCSSPageSize:true,pageSize:'A4',
+   margins:{marginType:'none'},displayHeaderFooter:false
+  });
+  await fs.writeFile(filePath,pdf);
+  return {canceled:false,filePath,folio:issued.folio,fecha:issued.documento.fecha,alreadyIssued:issued.alreadyIssued};
+ }finally{
+  if(!printer.isDestroyed())printer.destroy();
+  if(temporaryDirectory)await fs.rm(temporaryDirectory,{recursive:true,force:true});
+ }
+}
 
 function validateAntiplagioExport(spec){
  if(!spec||!Array.isArray(spec.files)||!['pdfs','zip'].includes(spec.mode)||!spec.files.length||spec.files.length>500)
@@ -285,6 +327,8 @@ else {
   ipcMain.handle('utet:firebase-status',(event)=>{verifySender(event);return Firebase.status();});
   ipcMain.handle('utet:excel-template',(event,spec)=>{verifySender(event);return Excel.downloadTemplate(event,spec);});
   ipcMain.handle('utet:excel-import',(event,spec)=>{verifySender(event);return Excel.importWorkbook(event,spec);});
+  ipcMain.handle('utet:cronograma-import',(event)=>{verifySender(event);return CronExcel.importFiles(event);});
+  ipcMain.handle('utet:cronograma-export',exportCronogramaPDF);
   createWindow();
   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});
 });
