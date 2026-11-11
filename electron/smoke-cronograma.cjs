@@ -27,7 +27,7 @@ function chronogram(grupo,offset){
   const date=day.toISOString().slice(0,10);
   return {actividad,inicio:date,fin:date};
  });
- return {grupo,actividades};
+ return {grupo,actividades:activities};
 }
 async function run(){
  const sample={id:'cr_smoke_2026_07',fecha:'2026-07-17',periodo:'Mayo 2026 - Noviembre 2026',
