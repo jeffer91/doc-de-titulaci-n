@@ -46,7 +46,14 @@ function schema(db){
  db.run('CREATE TABLE IF NOT EXISTS actas_articulo(periodo_id TEXT NOT NULL, cedula TEXT NOT NULL, documento TEXT NOT NULL, actualizado_en TEXT NOT NULL, PRIMARY KEY(periodo_id,cedula))');
  db.run('CREATE INDEX IF NOT EXISTS idx_actas_articulo_periodo ON actas_articulo(periodo_id)');
  db.run('CREATE TABLE IF NOT EXISTS actas_articulo_evidencia(periodo_id TEXT NOT NULL, cedula TEXT NOT NULL, documento TEXT NOT NULL, actualizado_en TEXT NOT NULL, PRIMARY KEY(periodo_id,cedula))');
- db.run('PRAGMA user_version=3');
+ // v4: actas de todas las modalidades (AA, TT, CX) en tablas con clave por modalidad.
+ // Las tablas actas_articulo* anteriores se conservan intactas; sus filas se copian una sola vez.
+ db.run('CREATE TABLE IF NOT EXISTS actas_titulacion(modalidad TEXT NOT NULL, periodo_id TEXT NOT NULL, cedula TEXT NOT NULL, documento TEXT NOT NULL, actualizado_en TEXT NOT NULL, PRIMARY KEY(modalidad,periodo_id,cedula))');
+ db.run('CREATE INDEX IF NOT EXISTS idx_actas_titulacion_periodo ON actas_titulacion(modalidad,periodo_id)');
+ db.run('CREATE TABLE IF NOT EXISTS actas_titulacion_evidencia(modalidad TEXT NOT NULL, periodo_id TEXT NOT NULL, cedula TEXT NOT NULL, documento TEXT NOT NULL, actualizado_en TEXT NOT NULL, PRIMARY KEY(modalidad,periodo_id,cedula))');
+ db.run("INSERT OR IGNORE INTO actas_titulacion(modalidad,periodo_id,cedula,documento,actualizado_en) SELECT 'ARTICULO_ACADEMICO',periodo_id,cedula,documento,actualizado_en FROM actas_articulo");
+ db.run("INSERT OR IGNORE INTO actas_titulacion_evidencia(modalidad,periodo_id,cedula,documento,actualizado_en) SELECT 'ARTICULO_ACADEMICO',periodo_id,cedula,documento,actualizado_en FROM actas_articulo_evidencia");
+ db.run('PRAGMA user_version=4');
 }
 async function open(baseDir){
  if(typeof baseDir!=='string'||!baseDir.trim())throw Error('Directorio local inválido.');
@@ -174,62 +181,71 @@ async function markSynced(baseDir,record){
   db.run(`INSERT INTO ${table}(periodo_id,cedula,documento,estado,actualizado_en) VALUES(?,?,?,'sincronizado',?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento,estado='sincronizado',actualizado_en=excluded.actualizado_en`,[p,c,JSON.stringify(copy),iso()]);
  });
 }
+const Modalidades=require('../renderer/acta-titulacion.modalidades.js');
+const modalityCfg=m=>Modalidades.get(m==null||m===''?Modalidades.DEFAULT:m);
+const modalityOf=m=>modalityCfg(m).id;
 function verifyActaIdentity(periodoId,cedula){
  key(periodoId,cedula);
  if(!/^\d{10}$/.test(cedula))throw Error('Cédula de diez dígitos requerida para el acta.');
 }
-async function loadActas(baseDir,periodoId){
+async function loadActas(baseDir,periodoId,modalidad){
+ const m=modalityOf(modalidad);
  if(!validPeriod(periodoId))throw Error('Período de actas inválido.');
  return serialized(async()=>{
   const {db}=await open(baseDir);
-  return prepared(db,'SELECT documento FROM actas_articulo WHERE periodo_id=?',[periodoId]).map(x=>JSON.parse(x.documento));
+  return prepared(db,'SELECT documento FROM actas_titulacion WHERE modalidad=? AND periodo_id=?',[m,periodoId]).map(x=>JSON.parse(x.documento));
  });
 }
-async function getActa(baseDir,periodoId,cedula){
+async function getActa(baseDir,periodoId,cedula,modalidad){
+ const m=modalityOf(modalidad);
  verifyActaIdentity(periodoId,cedula);
  return serialized(async()=>{
   const {db}=await open(baseDir);
-  const x=one(db,'SELECT documento FROM actas_articulo WHERE periodo_id=? AND cedula=?',[periodoId,cedula]);
+  const x=one(db,'SELECT documento FROM actas_titulacion WHERE modalidad=? AND periodo_id=? AND cedula=?',[m,periodoId,cedula]);
   return x?JSON.parse(x.documento):null;
  });
 }
 async function saveActa(baseDir,record){
- if(!record||!/^AA-\d{4}-\d{4}-(0[1-9]|1[0-2])-\d{4}$/.test(String(record.numeroActa||'')))
-  throw Error('Número oficial AA inválido.');
+ const cfg=modalityCfg(record&&record.modalidad);
+ if(!Modalidades.numberPattern(cfg).test(String(record.numeroActa||'')))
+  throw Error('Número oficial '+cfg.prefix+' inválido.');
  verifyActaIdentity(record.periodoId,record.cedula);
  const json=JSON.stringify(record);
  if(json.length>20000)throw Error('El acta excede el límite local.');
  return write(baseDir,db=>{
-  const old=one(db,'SELECT documento FROM actas_articulo WHERE periodo_id=? AND cedula=?',[record.periodoId,record.cedula]);
+  const old=one(db,'SELECT documento FROM actas_titulacion WHERE modalidad=? AND periodo_id=? AND cedula=?',[cfg.id,record.periodoId,record.cedula]);
   if(old&&JSON.parse(old.documento).numeroActa!==record.numeroActa)throw Error('El acta ya tiene otro número registrado.');
-  db.run('INSERT INTO actas_articulo(periodo_id,cedula,documento,actualizado_en) VALUES(?,?,?,?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento,actualizado_en=excluded.actualizado_en',
-   [record.periodoId,record.cedula,json,iso()]);
+  db.run('INSERT INTO actas_titulacion(modalidad,periodo_id,cedula,documento,actualizado_en) VALUES(?,?,?,?,?) ON CONFLICT(modalidad,periodo_id,cedula) DO UPDATE SET documento=excluded.documento,actualizado_en=excluded.actualizado_en',
+   [cfg.id,record.periodoId,record.cedula,json,iso()]);
   return record;
  });
 }
-async function listActaEvidences(baseDir,periodoId){
+async function listActaEvidences(baseDir,periodoId,modalidad){
+ const m=modalityOf(modalidad);
  if(!validPeriod(periodoId))throw Error('Período inválido.');
  return serialized(async()=>{
   const {db}=await open(baseDir);
-  return prepared(db,'SELECT cedula,documento FROM actas_articulo_evidencia WHERE periodo_id=?',[periodoId])
+  return prepared(db,'SELECT cedula,documento FROM actas_titulacion_evidencia WHERE modalidad=? AND periodo_id=?',[m,periodoId])
    .map(row=>({...JSON.parse(row.documento),cedula:row.cedula}));
  });
 }
-async function getActaEvidence(baseDir,periodoId,cedula){
+async function getActaEvidence(baseDir,periodoId,cedula,modalidad){
+ const m=modalityOf(modalidad);
  verifyActaIdentity(periodoId,cedula);
  return serialized(async()=>{
   const {db}=await open(baseDir);
-  const x=one(db,'SELECT documento FROM actas_articulo_evidencia WHERE periodo_id=? AND cedula=?',[periodoId,cedula]);
+  const x=one(db,'SELECT documento FROM actas_titulacion_evidencia WHERE modalidad=? AND periodo_id=? AND cedula=?',[m,periodoId,cedula]);
   return x?JSON.parse(x.documento):null;
  });
 }
-async function saveActaEvidence(baseDir,periodoId,cedula,evidence){
+async function saveActaEvidence(baseDir,periodoId,cedula,evidence,modalidad){
+ const m=modalityOf(modalidad||(evidence&&evidence.modalidad));
  verifyActaIdentity(periodoId,cedula);
  const json=JSON.stringify(evidence);
  if(json.length>20000)throw Error('La verificación excede el límite local.');
  return write(baseDir,db=>{
-  db.run('INSERT INTO actas_articulo_evidencia(periodo_id,cedula,documento,actualizado_en) VALUES(?,?,?,?) ON CONFLICT(periodo_id,cedula) DO UPDATE SET documento=excluded.documento,actualizado_en=excluded.actualizado_en',
-  [periodoId,cedula,json,iso()]);
+  db.run('INSERT INTO actas_titulacion_evidencia(modalidad,periodo_id,cedula,documento,actualizado_en) VALUES(?,?,?,?,?) ON CONFLICT(modalidad,periodo_id,cedula) DO UPDATE SET documento=excluded.documento,actualizado_en=excluded.actualizado_en',
+  [m,periodoId,cedula,json,iso()]);
   return evidence;
  });
 }

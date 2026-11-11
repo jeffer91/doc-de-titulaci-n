@@ -30,10 +30,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: PDFs-de-control-memorandos-y-acta-AA
+          name: PDFs-de-control-memorandos-y-actas-AA-TT-CX
           path: |
             ${{ runner.temp }}/utet-pdf-qa/memorando-revision.pdf
             ${{ runner.temp }}/utet-pdf-qa/memorando-articulo-revision.pdf
             ${{ runner.temp }}/utet-pdf-qa/acta-articulo-academico-control.pdf
+            ${{ runner.temp }}/utet-pdf-qa/acta-trabajo-titulacion-control.pdf
+            ${{ runner.temp }}/utet-pdf-qa/acta-examen-complexivo-control.pdf
           if-no-files-found: ignore
           retention-days: 3

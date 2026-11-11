@@ -10,6 +10,7 @@ const AntiplagioStore = require('./antiplagio-store.js');
 const AntiplagioLocal = require('./antiplagio-local.js');
 const ActaArticulo = require('./acta-articulo.js');
 const ActaArticuloModel = require('../renderer/acta-articulo.model.js');
+const ActaModalidades = require('../renderer/acta-titulacion.modalidades.js');
 const JSZip = require('jszip');
 const Downloads = require('./downloads.js');
 
@@ -166,16 +167,18 @@ async function exportAntiplagio(event,spec){
 }
 
 
+const actaModality=m=>ActaModalidades.get(m==null||m===''?ActaModalidades.DEFAULT:m);
 async function exportArticleActs(event,spec){
  verifySender(event);
  if(!spec||!['pdfs','zip'].includes(spec.mode)||!Array.isArray(spec.cedulas)||
     spec.cedulas.length<1||spec.cedulas.length>300||new Set(spec.cedulas).size!==spec.cedulas.length||
     !AntiplagioLocal.validPeriod(spec.periodoId)||typeof spec.periodLabel!=='string'||spec.periodLabel.length>120)
-  throw Error('Selección de actas AA inválida.');
+  throw Error('Selección de actas inválida.');
+ const cfg=actaModality(spec.modalidad);
  const records=[];
  for(const cedula of spec.cedulas){
-  const r=await ActaArticulo.get(localDir(),spec.periodoId,cedula);
-  if(!ActaArticuloModel.valid(r))throw Error('No existe un acta AA emitida y verificada para '+cedula+'.');
+  const r=await ActaArticulo.get(localDir(),spec.periodoId,cedula,cfg.id);
+  if(!ActaArticuloModel.valid(r)||r.modalidad!==cfg.id)throw Error('No existe un acta '+cfg.prefix+' emitida y verificada para '+cedula+'.');
   records.push(r);
  }
  const printer=new BrowserWindow({show:false,webPreferences:{
@@ -183,7 +186,7 @@ async function exportArticleActs(event,spec){
  }});
  let tempDir=null;
  try{
-  tempDir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-aa-'));
+  tempDir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-acta-'));
   const zip=spec.mode==='zip'?new JSZip():null,output=[],dest=app.getPath('downloads');
   for(let i=0;i<records.length;i++){
    const record=records[i],filename=ActaArticuloModel.filename(record);
@@ -198,7 +201,7 @@ async function exportArticleActs(event,spec){
    if(zip)zip.file(filename,pdf);
    else output.push(await Downloads.saveUnique(dest,filename,pdf));
   }
-  if(zip)output.push(await Downloads.saveUnique(dest,'Actas_Articulo_Academico_UTET.zip',
+  if(zip)output.push(await Downloads.saveUnique(dest,cfg.zipName,
     await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'})));
   return {count:records.length,location:dest,files:output.map(x=>x.filePath)};
  }finally{
@@ -265,11 +268,12 @@ else {
     verifySender(event);
     return Memo.next(app.getPath('userData'),date);
   });
-  ipcMain.handle('utet:acta-articulo-open',(event,p)=>{verifySender(event);return ActaArticulo.openPeriod(p,localDir(),Firebase.loadStudents);});
-  ipcMain.handle('utet:acta-articulo-refresh',(event,p)=>{verifySender(event);return ActaArticulo.refreshStudents(p,localDir(),Firebase.loadStudents);});
-  ipcMain.handle('utet:acta-articulo-verify',(event,p,c)=>{verifySender(event);return ActaArticulo.readEvidence(p,c,localDir());});
-  ipcMain.handle('utet:acta-articulo-issue',(event,p,c)=>{verifySender(event);return ActaArticulo.issue(p,c,localDir());});
-  ipcMain.handle('utet:acta-articulo-recover',(event,p,c)=>{verifySender(event);return ActaArticulo.recover(p,c,localDir());});
+  // Actas de titulación: el último argumento es la modalidad (AA por omisión para compatibilidad).
+  ipcMain.handle('utet:acta-articulo-open',(event,p,m)=>{verifySender(event);return ActaArticulo.openPeriod(p,localDir(),Firebase.loadStudents,actaModality(m).id);});
+  ipcMain.handle('utet:acta-articulo-refresh',(event,p,m)=>{verifySender(event);return ActaArticulo.refreshStudents(p,localDir(),Firebase.loadStudents,actaModality(m).id);});
+  ipcMain.handle('utet:acta-articulo-verify',(event,p,c,m)=>{verifySender(event);return ActaArticulo.readEvidence(p,c,localDir(),actaModality(m).id);});
+  ipcMain.handle('utet:acta-articulo-issue',(event,p,c,m)=>{verifySender(event);return ActaArticulo.issue(p,c,localDir(),actaModality(m).id);});
+  ipcMain.handle('utet:acta-articulo-recover',(event,p,c,m)=>{verifySender(event);return ActaArticulo.recover(p,c,localDir(),actaModality(m).id);});
   ipcMain.handle('utet:acta-articulo-export',exportArticleActs);
   ipcMain.handle('utet:antiplagio-open',(event,periodoId,modo)=>{verifySender(event);return openAntiplagioPeriod(periodoId,modo);});
   ipcMain.handle('utet:antiplagio-refresh',(event,periodoId,modo)=>{verifySender(event);return refreshAntiplagioPeriod(periodoId,modo);});

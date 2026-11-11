@@ -25,6 +25,24 @@ npm run dist:win
 
 El instalador final se genera en `dist/` en Windows; un proyecto abierto con `npm start` sigue lanzándose a través de Electron y **no crea por sí mismo un acceso directo**. Los accesos directos anteriores pueden conservar su icono hasta reinstalar o actualizar el acceso directo. No se cambian los datos de SQLite ni el proyecto Firebase por este ajuste visual.
 
+## Actas de Titulación · PRO-93 Examen Complexivo (CX) y PRO-164 Trabajo de Titulación (TT)
+
+Los documentos `acta-examen` (UTET-PRO-93) y `acta-trabajo` (UTET-PRO-164) comparten con `acta-articulo` la misma pantalla, el mismo motor de verificación y la misma plantilla de tres hojas carta descrita en la sección siguiente. Cada botón «Datos» del catálogo abre la pantalla con su modalidad; la configuración de textos, prefijos y controles vive en `renderer/acta-titulacion.modalidades.js`.
+
+| Modalidad | Prefijo del número | Identidad en `actas_registro` | Controles además de 9 requisitos + 2 aprobaciones CUMPLE |
+|---|---|---|---|
+| Artículo Académico (PRO-57) | `AA-AAAA-CCCC-MM-NNNN` | `AA__<periodo>__<cedula>` | artículo ≥7/10, defensa ≥7/10, similitud real ≤20 % (memorando `articulo__…`), modalidad `ARTICULO_ACADEMICO` |
+| Trabajo de Titulación (PRO-164) | `TT-AAAA-CCCC-MM-NNNN` | `TT__<periodo>__<cedula>` | trabajo escrito ≥7/10 (`notaEscrito`/`notaTrabajo`), defensa ≥7/10, similitud real ≤20 % (memorando de trabajo `<periodo>__<cedula>`), modalidad `TRABAJO_TITULACION` |
+| Examen Complexivo (PRO-93) | `CX-AAAA-CCCC-MM-NNNN` | `CX__<periodo>__<cedula>` | solo modalidad `EXAMEN_COMPLEXIVO` acreditada; las calificaciones y oportunidades se administran en Ncomplex y no se consultan ni imprimen |
+
+- **Formato CX:** reproduce las actas de Complexivo de referencia (`CX-2026-0106-05-0009`, etc.): portada, constancia con «Modalidad de titulación: Examen Complexivo», nueve requisitos, apartado 3 con la nota sobre Ncomplex, y tercera hoja con «4. Aprobaciones institucionales» y «5. Constancia documental». No existe sección de condiciones académicas.
+- **Formato TT:** idéntico al AA, con «Aprobación del trabajo de titulación» y «5. Verificación de las condiciones académicas» para trabajo escrito, defensa, similitud y modalidad.
+- **Modalidad registrada:** se lee de `notas.modalidadTitulacion`, y en su defecto de `matriculas.modalidadTitulacion` o `requisitos.modalidadTitulacion`. Si ningún documento la registra, el acta queda bloqueada; nunca se asume por la carrera ni por el proceso desde el que se abrió la pantalla.
+- **Numeración:** las tres modalidades comparten el contador mensual `actas_contadores/<AAAA-MM>` y el libro `actas_numeros`, en una sola transacción; cada una conserva identidad y prefijo propios, de modo que un mismo estudiante no puede recibir dos actas de la misma modalidad en un período.
+- **Firmas:** la portada deja el espacio en blanco. No se reproducen los sellos «Firmado electrónicamente por…» que aparecen en los PDF de referencia porque esa firma debe aplicarse con el certificado legítimo de cada firmante.
+- **SQLite:** nuevas tablas `actas_titulacion` y `actas_titulacion_evidencia` con clave (modalidad, período, cédula). Al abrir una base anterior, las filas de `actas_articulo*` se copian una vez a las tablas nuevas y las tablas antiguas se conservan sin cambios.
+- **Descargas:** `ACTA_COMPLEX_<cedula>_<número>.pdf`, `ACTA_TT_<cedula>_<número>.pdf` y `ACTA_AA_<cedula>_<número>.pdf`; ZIP por modalidad (`Actas_Examen_Complexivo_UTET.zip`, `Actas_Trabajo_Titulacion_UTET.zip`, `Actas_Articulo_Academico_UTET.zip`).
+
 ## PRO-57 · Acta de Titulación por Artículo Académico (AA)
 
 El documento `acta-articulo` del proceso UTET-PRO-57 tiene una pantalla propia:
@@ -117,6 +135,8 @@ GitHub Actions ejecuta además pruebas de impresión real en Chromium/Electron, 
 ## Estructura relevante
 
 - `electron/antiplagio-local.js`: SQLite por período, caché persistente, transacciones, borradores y reemplazos atómicos.
+- `renderer/acta-titulacion.modalidades.js`: textos, prefijos y controles de las tres modalidades de Acta de Titulación (AA, TT, CX).
+- `electron/acta-articulo.js`, `electron/acta-articulo-evidence.js`, `renderer/acta-articulo.model.js`, `renderer/acta-articulo.js`: motor, verificación, plantilla de tres hojas y pantalla compartida de las actas; reciben la modalidad como parámetro.
 - `electron/firebase-read.js`: lectura académica Firebase únicamente durante la primera sincronización o actualización explícita.
 - `electron/antiplagio-store.js`: documentos personales, reemplazos y dos contadores transaccionales.
 - `electron/main.js`: operaciones IPC, impresión aislada en PDF, descarga directa de PDF y ZIP a Descargas.
@@ -129,4 +149,4 @@ GitHub Actions ejecuta además pruebas de impresión real en Chromium/Electron, 
 - `electron/memo-numbering.js`: numerador **local anterior**, conservado solo por compatibilidad del exportador histórico; el nuevo flujo individual utiliza el contador de Firebase.
 - `renderer/records.js`, `renderer/records-ui.js`, `electron/excel.js`: formularios y Excel de los otros tipos documentales.
 
-Los otros 23 tipos continúan en la fase de maquetación. Esta ampliación no convierte en documentos aprobados las plantillas institucionales que todavía no se han formalizado. Las firmas electrónicas no se generan automáticamente; la firma queda en blanco hasta su aplicación legítima.
+Los otros 19 tipos continúan en la fase de maquetación. Esta ampliación no convierte en documentos aprobados las plantillas institucionales que todavía no se han formalizado. Las firmas electrónicas no se generan automáticamente; la firma queda en blanco hasta su aplicación legítima.

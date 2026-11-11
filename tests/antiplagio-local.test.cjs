@@ -73,6 +73,20 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
   assert.equal((await Local.getActaEvidence(dir,PERIOD,CEDULA)).eligible,false);
   assert.equal((await Local.listActaEvidences(dir,PERIOD)).length,1);
   await assert.rejects(()=>Local.saveActa(dir,{...aa,numeroActa:'AA-2026-0102-05-0002'}),/otro número/);
+  // Actas CX y TT: mismo estudiante, registros independientes por modalidad; AA no se mezcla.
+  const cx={...aa,modalidad:'EXAMEN_COMPLEXIVO',numeroActa:'CX-2026-0102-05-0002'};
+  const tt={...aa,modalidad:'TRABAJO_TITULACION',numeroActa:'TT-2026-0102-05-0003'};
+  await Local.saveActa(dir,cx);await Local.saveActa(dir,tt);
+  await assert.rejects(()=>Local.saveActa(dir,{...cx,numeroActa:'AA-2026-0102-05-0009'}),/inválido/);
+  assert.equal((await Local.getActa(dir,PERIOD,CEDULA,'EXAMEN_COMPLEXIVO')).numeroActa,cx.numeroActa);
+  assert.equal((await Local.getActa(dir,PERIOD,CEDULA,'TRABAJO_TITULACION')).numeroActa,tt.numeroActa);
+  assert.equal((await Local.getActa(dir,PERIOD,CEDULA)).numeroActa,aa.numeroActa);
+  assert.equal((await Local.loadActas(dir,PERIOD,'EXAMEN_COMPLEXIVO')).length,1);
+  assert.equal((await Local.loadActas(dir,PERIOD,'ARTICULO_ACADEMICO')).length,1);
+  await Local.saveActaEvidence(dir,PERIOD,CEDULA,{modalidad:'EXAMEN_COMPLEXIVO',eligible:true,missing:[]});
+  assert.equal((await Local.getActaEvidence(dir,PERIOD,CEDULA,'EXAMEN_COMPLEXIVO')).eligible,true);
+  assert.equal((await Local.getActaEvidence(dir,PERIOD,CEDULA)).eligible,false,'La evidencia AA no cambia');
+  await assert.rejects(()=>Local.loadActas(dir,PERIOD,'OTRA'),/no reconocida/);
   const filename=path.join(dir,'UTET',Local.NAME);
   assert.equal((await fs.readFile(filename)).subarray(0,15).toString('utf8'),'SQLite format 3');
   await Local.saveDraft(dir,{...snap.records[0],similitud:'13.50'});
@@ -109,6 +123,18 @@ const memo=p=>({periodoId:p,cedula:CEDULA,estudianteId:p+'__'+CEDULA,nombres:'An
   assert.equal((await Reopened.getActa(dir,PERIOD,CEDULA)).numeroActa,aa.numeroActa,'El folio AA no se pierde al reiniciar');
   assert.equal((await Reopened.snapshot(dir,PERIOD,'articulo')).records[0].folio,articulo.folio,'El artículo también sobrevive el reinicio');
   assert.equal(reloaded.syncedAt!==null,true);
+  // Migración v4: actas AA guardadas por versiones anteriores en actas_articulo pasan a actas_titulacion sin borrarse.
+  const legacyDir=await fs.mkdtemp(path.join(os.tmpdir(),'utet-local-legacy-'));
+  try{
+   const SQL=await require('sql.js')({locateFile:f=>require.resolve('sql.js/dist/'+f)});
+   const legacy=new SQL.Database();
+   legacy.run('CREATE TABLE actas_articulo(periodo_id TEXT NOT NULL, cedula TEXT NOT NULL, documento TEXT NOT NULL, actualizado_en TEXT NOT NULL, PRIMARY KEY(periodo_id,cedula))');
+   legacy.run('INSERT INTO actas_articulo VALUES(?,?,?,?)',[PERIOD,CEDULA,JSON.stringify({...aa,modalidad:'ARTICULO_ACADEMICO'}),'2026-11-01T00:00:00.000Z']);
+   await fs.mkdir(path.join(legacyDir,'UTET'),{recursive:true});
+   await fs.writeFile(path.join(legacyDir,'UTET',Reopened.NAME),Buffer.from(legacy.export()));
+   assert.equal((await Reopened.getActa(legacyDir,PERIOD,CEDULA)).numeroActa,aa.numeroActa,'Acta AA previa visible tras migrar');
+   assert.equal((await Reopened.loadActas(legacyDir,PERIOD,'EXAMEN_COMPLEXIVO')).length,0);
+  }finally{await fs.rm(legacyDir,{recursive:true,force:true});}
   console.log('OK SQLite: primera carga, búsqueda local, reemplazo atómico, borradores y persistencia entre sesiones.');
  }finally{await fs.rm(dir,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

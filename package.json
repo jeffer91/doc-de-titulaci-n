@@ -2,11 +2,11 @@
   "name": "doc-de-titulacion",
   "version": "0.9.0",
   "private": true,
-  "description": "UTET: memorandos PRO-164/57 y Actas de Titulación por Artículo Académico PRO-57",
+  "description": "UTET: memorandos PRO-164/57 y Actas de Titulación AA (PRO-57), Trabajo (PRO-164) y Complexivo (PRO-93)",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check electron/main.js && node --check electron/excel.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js && node --check renderer/records.js && node --check renderer/antiplagio.model.js && node --check renderer/antiplagio.js && node --check electron/firebase-read.js && node --check electron/memo-numbering.js && node --check electron/antiplagio-store.js && node --check electron/antiplagio-local.js && node --check electron/downloads.js && node --check electron/acta-articulo-date.js && node --check electron/acta-articulo-evidence.js && node --check electron/acta-articulo.js && node --check renderer/acta-articulo.model.js && node --check renderer/acta-articulo.js",
+    "check": "node --check electron/main.js && node --check electron/excel.js && node --check electron/preload.js && node --check renderer/app.js && node --check renderer/institutional.js && node --check renderer/data.js && node --check renderer/records.js && node --check renderer/antiplagio.model.js && node --check renderer/antiplagio.js && node --check electron/firebase-read.js && node --check electron/memo-numbering.js && node --check electron/antiplagio-store.js && node --check electron/antiplagio-local.js && node --check electron/downloads.js && node --check electron/acta-articulo-date.js && node --check electron/acta-articulo-evidence.js && node --check electron/acta-articulo.js && node --check renderer/acta-titulacion.modalidades.js && node --check renderer/acta-articulo.model.js && node --check renderer/acta-articulo.js",
     "test": "node tests/institutional.test.cjs && node tests/records.test.cjs && node tests/ui.test.cjs && node tests/antiplagio-auto.test.cjs && node tests/antiplagio.test.cjs && node tests/memo-numbering.test.cjs && node tests/antiplagio-local.test.cjs && node tests/branding.test.cjs && node tests/downloads.test.cjs && node tests/acta-articulo.test.cjs && node tests/acta-articulo-ui.test.cjs",
     "dist:win": "electron-builder --win nsis portable"
   },
