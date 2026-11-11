@@ -26,6 +26,7 @@ jobs:
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --articulo
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-antiplagio.cjs --many
           xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-acta-articulo.cjs
+          xvfb-run -a ./node_modules/.bin/electron --no-sandbox electron/smoke-cronograma.cjs
       - name: Adjuntar PDF ficticio para inspección visual
         if: always()
         uses: actions/upload-artifact@v4
@@ -37,5 +38,6 @@ jobs:
             ${{ runner.temp }}/utet-pdf-qa/acta-articulo-academico-control.pdf
             ${{ runner.temp }}/utet-pdf-qa/acta-trabajo-titulacion-control.pdf
             ${{ runner.temp }}/utet-pdf-qa/acta-examen-complexivo-control.pdf
+            ${{ runner.temp }}/utet-pdf-qa/cronograma-articulo-control.pdf
           if-no-files-found: ignore
           retention-days: 3
