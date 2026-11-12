@@ -46,6 +46,8 @@
 .inst-data-table{border-collapse:collapse;width:180mm;font-size:8.5pt;line-height:1.25;margin:3mm 0 5mm;table-layout:fixed}
 .inst-data-table th,.inst-data-table td{border:.5pt solid #111;text-align:left;padding:1.5mm;overflow-wrap:anywhere;vertical-align:middle}
 .inst-data-table th{font-weight:bold;background:#fff}.inst-data-table tr{break-inside:avoid;page-break-inside:avoid}
+.inst-workflow-table td{white-space:pre-line;vertical-align:top}
+.inst-workflow-table th{background:#eef3f8}
 .inst-note{font-size:8pt;color:#666}
 .inst-letter{font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:1.4;padding:25mm 25mm 25mm 20mm}
 .inst-letter .inst-seal{right:25mm}

@@ -19,7 +19,9 @@ const Memo=require('../electron/cronograma-numbering.js');
   ws.addRow([act,46252,46252]);
   return ws;
  }
- sheet('May Nov U','Mayo 2026 - Noviembre 2026 - Universitarios','Clase de metodología 1');
+ const uni=sheet('May Nov U','Mayo 2026 - Noviembre 2026 - Universitarios','Clase de metodología 1');
+ uni.addRow(['Entrega del borrador',{formula:'B3+7',result:46259},{formula:'C3+7',result:46259}]);
+ uni.addRow(['Actividad sin fechas']);
  sheet('May Nov S','Mayo 2026 - Noviembre 2026 - Superiores','Entrega de títulos del artículo académico');
  sheet('Complex Oct 27','Octubre 2026 a Marzo 2027','Examen complexivo');
  sheet('Trabajo','Trabajo de titulación','Aprobación de tesis');
@@ -32,6 +34,8 @@ const Memo=require('../electron/cronograma-numbering.js');
  assert.equal(result[0].grupo,'Universitarios');
  assert.equal(result[1].grupo,'Superiores');
  assert.equal(result[0].periodo,'Mayo 2026 - Noviembre 2026');
+ assert.equal(result[0].actividades.length,2);
+ assert.match(result[0].warnings.join(' '),/Fila 5/);
  assert.equal(result[2].tipo,'complexivo');
  assert.equal(result[2].selected,false);
  assert.equal(result[3].tipo,'trabajo');
@@ -41,7 +45,7 @@ const Memo=require('../electron/cronograma-numbering.js');
  assert.equal(result[6].grupo,'Por determinar');
  const p=Model.validate({
   id:'cr_unit_test',fecha:'2026-07-17',periodo:'Mayo 2026 - Noviembre 2026',
-  cronogramas:result.slice(0,2).map(r=>({grupo:r.grupo,hoja:r.sheetName,actividades:r.actividades}))
+  cronogramas:result.slice(0,2).map(r=>({grupo:r.grupo,hoja:r.sheetName,periodo:r.periodo,actividades:r.actividades}))
  });
  const html=Model.render(p,'MEM-ITSQMET-UTET-2026-07-01');
  assert.match(html,/Memorando No\. MEM-ITSQMET-UTET-2026-07-01/);
@@ -53,6 +57,9 @@ const Memo=require('../electron/cronograma-numbering.js');
  assert.throws(()=>Model.validate({...p,cronogramas:[{grupo:'',actividades:result[0].actividades}]}),/grupo/i);
  assert.throws(()=>Model.validate({...p,cronogramas:[{grupo:'Por determinar',actividades:result[0].actividades}]}),/grupo/i);
  assert.throws(()=>Model.validate({...p,cronogramas:[{grupo:'Superiores',periodo:'Octubre 2025 - Marzo 2026',actividades:result[0].actividades}]}),/período/i);
+ assert.throws(()=>Model.validate({...p,cronogramas:[{grupo:'Superiores',actividades:result[0].actividades}]}),/período/i);
+ assert.throws(()=>Model.validate({...p,periodo:'Noviembre 2025 - Mayo 2025'}),/cronológico/);
+ assert.doesNotThrow(()=>Model.validate({...p,periodo:'Mayo 2026 a Noviembre 2026'}));
  assert.doesNotThrow(()=>Model.validate({...p,cronogramas:[{grupo:'Superiores',periodo:'Mayo 2026 – Noviembre 2026',actividades:result[0].actividades}]}));
  console.log('Cronogramas UTET-PRO-57: parser flexible, numeración, PDF y validaciones OK');
 })().catch(err=>{console.error(err);process.exitCode=1;});

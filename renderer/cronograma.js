@@ -8,19 +8,23 @@ window.UTET_CRONOGRAMA_UI=Object.freeze({create:function(ctx){
  const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
  const nextId=()=> 'cr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);
  const blank=()=>({id:nextId(),fecha:today(),periodo:period().label,folio:''});
- let sheets=[],memo=blank(),active=0,showPreview=false;
+ let sheets=[],memo=blank(),active=0,showPreview=false,exporting='';
  try{const old=JSON.parse(localStorage.getItem(KEY)||'{}');if(Array.isArray(old.sheets))sheets=old.sheets;if(old.memo&&typeof old.memo==='object')memo={...blank(),...old.memo};}catch{}
  function persist(){
   try{localStorage.setItem(KEY,JSON.stringify({sheets,memo}));return true;}
   catch(e){showToast('No se pudo guardar el cronograma: almacenamiento local lleno.');return false;}
  }
- function changed(){if(memo.folio){memo={...memo,id:nextId(),folio:''};showToast('Se abrió una nueva versión sin folio; el memorando emitido conserva su contenido original.');}showPreview=false;persist();}
+ function changed(){
+  if(memo.folio||memo.id===exporting){
+   memo={...memo,id:nextId(),folio:''};
+   showToast('Se abrió una nueva versión del memorando.');
+  }
+  showPreview=false;persist();
+ }
  const selected=()=>sheets.filter(x=>x.selected&&x.tipo!=='trabajo'&&x.tipo!=='complexivo'&&x.actividades.length);
  function payload(){
   const picks=selected();
   if(!picks.length)throw Error('Selecciona un cronograma con actividades.');
-  const labels=[...new Set(picks.map(x=>String(x.periodo||'').trim().toLowerCase()).filter(Boolean))];
-  if(labels.length>1)throw Error('Seleccionaste cronogramas de distintos períodos. Genera un memorando por período.');
   return Model.validate({id:memo.id,fecha:memo.fecha,periodo:memo.periodo,cronogramas:picks.map(x=>({
    grupo:x.grupo,hoja:x.sheetName,periodo:x.periodo,actividades:x.actividades
   }))});
@@ -75,34 +79,40 @@ window.UTET_CRONOGRAMA_UI=Object.freeze({create:function(ctx){
    // En libros con muchos períodos, seleccionar inicialmente solo el primero
    // y sus grupos; nunca todos los períodos en un único memorando.
    const alreadySelected=selected().length>0;
-   const firstNew=res.sheets.find(x=>x.tipo==='articulo'&&x.actividades?.length&&x.periodo);
-   const autoPeriod=firstNew?.periodo||'';
+   const firstNew=res.sheets.find(x=>x.tipo==='articulo'&&x.actividades?.length&&Model.periodKey(x.periodo));
+   const autoPeriod=Model.periodKey(firstNew?.periodo);
    for(const item of res.sheets){
     if(sheets.some(x=>x.fileName===item.fileName&&x.sheetName===item.sheetName&&x.periodo===item.periodo)){duplicates++;continue;}
     const autoSelect=!alreadySelected&&item.tipo==='articulo'&&!!item.actividades?.length&&
-      !!autoPeriod&&String(item.periodo||'').trim().toLowerCase()===String(autoPeriod).trim().toLowerCase();
+      !!autoPeriod&&Model.periodKey(item.periodo)===autoPeriod;
     sheets.push({...item,selected:autoSelect,uid:nextId()});added++;
    }
    if(sheets.length>60){sheets=sheets.slice(0,60);showToast('Se alcanzó el límite de 60 hojas.');}
    const first=selected()[0];
    if(first&&(!memo.periodo||memo.periodo===period().label))memo.periodo=first.periodo||memo.periodo;
-   if(memo.folio){memo={...memo,id:nextId(),folio:''};}
+   if(memo.folio||memo.id===exporting){memo={...memo,id:nextId(),folio:''};}
    persist();showPreview=false;render();
    showToast(added+' hojas importadas; '+duplicates+' duplicadas omitidas.');
    logAction('Cronogramas importados',res.files+' Excel; '+added+' hoja(s) nuevas.');
   }catch(err){showToast('Error al importar: '+String(err.message||err));}
  }
  async function exportPDF(){
+  if(exporting)return;
   if(!window.utetDesktop?.exportCronogramaPDF){showToast('La emisión PDF requiere Electron.');return;}
-  let data;try{data=payload();}catch(err){showToast(err.message);return;}
+  const id=memo.id;
+  let data;try{data=memo.folio?{reprintId:id}:payload();}catch(err){showToast(err.message);return;}
+  exporting=id;
   try{
    const response=await window.utetDesktop.exportCronogramaPDF(data);
    if(response?.canceled)return;
-   memo.folio=response.folio;memo.fecha=response.fecha||memo.fecha;
-   persist();render();
+   if(memo.id===id){
+    memo.folio=response.folio;memo.fecha=response.fecha||memo.fecha;
+    persist();render();
+   }
    showToast('PDF generado: '+response.folio);
    logAction('Memorando de cronograma emitido',response.folio);
-  }catch(err){showToast('No se emitió memorando: '+String(err.message||err).slice(0,190));}
+  }catch(err){showToast('No se generó el PDF: '+String(err.message||err).slice(0,190));}
+  finally{exporting='';}
  }
  function action(a,id){
   if(a==='rec-open'&&id==='cron-articulo'){go('cronograma');return true;}

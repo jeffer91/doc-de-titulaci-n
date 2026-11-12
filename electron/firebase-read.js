@@ -17,6 +17,7 @@ const FIREBASE_CONFIG = Object.freeze({
 const APP_NAME='utet-doc-titulacion-lectura';
 const MAX_STUDENTS=5000;
 const PERSON_CONCURRENCY=12;
+const {requirementRows,withdrawn}=require('./acta-articulo-evidence.js');
 let sdkInstance=null;
 
 const str = value => String(value==null?'':value).trim();
@@ -38,6 +39,19 @@ function nameOf(person,enrolment){
   return first(person,['nombreCompleto','nombresCompletos','nombre_completo','estudiante','apellidosNombres'])
     ||names||surname
     ||first(enrolment,['nombreCompleto','nombreEstudiante','estudiante','nombres']);
+}
+const studentId=row=>first(row,['cedula','identificacion','numeroIdentificacion']);
+function studentFrom(row,person,periodoId,cedula){
+  return {
+    estudianteId:periodoId+'__'+cedula,cedula,periodoId,
+    nombres:nameOf(person,row),
+    carreraId:first(row,['codigoCarrera','carreraId','codigoCarreraActual']),
+    carreraNombre:first(row,['nombreCarrera','carreraNombre','carrera'])||first(person,['nombreCarreraActual','nombreCarrera']),
+    modalidad:first(row,['modalidadEstudios','modalidad','tipoModalidad','modalidadEstudio'])||first(person,['modalidadEstudios','modalidad']),
+    sede:first(row,['sede','nombreSede','campus'])||first(person,['sede','nombreSede']),
+    jornada:first(row,['jornada','nombreJornada','horario'])||first(person,['jornada']),
+    retirado:withdrawn(row)
+  };
 }
 function fromSDK(){
   if(sdkInstance)return sdkInstance;
@@ -108,30 +122,43 @@ function createReader(provider=fromSDK){
     }
     return people;
   }
+  async function readOne(collection,id){
+    const {db,api}=client();
+    try{
+      const snap=await api.getDoc(api.doc(db,collection,id));
+      return snap.exists()?snap.data():null;
+    }catch(error){throw explain(error,collection);}
+  }
+  async function loadDocumentStudent(periodoId,cedula,includeRequirements=false){
+    if(!validPeriod(periodoId)||!validId(cedula))throw Error('Identificación o período inválido.');
+    const period=str(periodoId),id=str(cedula),key=period+'__'+id;
+    const enrollment=await readOne('matriculas',key);
+    if(!enrollment||str(enrollment.periodoId)!==period||studentId(enrollment)!==id||enrollment.eliminado||withdrawn(enrollment))
+      return {student:null};
+    const student=studentFrom(enrollment,await readOne('Estudiante',id)||{},period,id);
+    if(!student.nombres||!student.carreraNombre)throw Error('La matrícula está incompleta. Revisa la ficha académica.');
+    const result={student,readAt:new Date().toISOString()};
+    if(!includeRequirements)return result;
+    try{
+      const req=await readOne('requisitos',key);
+      if(req&&str(req.periodoId)===period&&studentId(req)===id&&!req.eliminado)
+        result.requirements=Object.fromEntries(requirementRows(req.valores).map(item=>[item.key,item.status]));
+      else result.warning='Matrícula cargada. No consta una ficha de requisitos para el período.';
+    }catch(error){result.warning='Matrícula cargada. '+error.message;}
+    return result;
+  }
   async function loadStudents(periodoId){
     if(!validPeriod(periodoId))
       throw new Error('El identificador del período es inválido.');
     const enrollments=await readMatriculas(periodoId);
-    const ids=[...new Set(enrollments.map(row=>first(row,
-      ['cedula','identificacion','numeroIdentificacion'])).filter(validId))];
+    const ids=[...new Set(enrollments.map(studentId).filter(validId))];
     const people=await readPeople(ids);
     const selected=new Map();
     for(const row of enrollments){
-      const cedula=first(row,['cedula','identificacion','numeroIdentificacion']);
+      const cedula=studentId(row);
       if(!validId(cedula)||str(row.periodoId)!==periodoId)continue;
       const person=people.get(cedula)||{};
-      const estudiante={
-        estudianteId:periodoId+'__'+cedula,
-        cedula,periodoId,
-        nombres:nameOf(person,row),
-        carreraId:first(row,['codigoCarrera','carreraId','codigoCarreraActual']),
-        carreraNombre:first(row,['nombreCarrera','carreraNombre','carrera'])
-          || first(person,['nombreCarreraActual','nombreCarrera']),
-        modalidad:first(row,['modalidadEstudios','modalidad','tipoModalidad','modalidadEstudio'])||first(person,['modalidadEstudios','modalidad']),
-        sede:first(row,['sede','nombreSede','campus'])||first(person,['sede','nombreSede']),
-        jornada:first(row,['jornada','nombreJornada','horario'])||first(person,['jornada']),
-        retirado:row.retirado===true||/retirad/i.test(str(row.estadoMatricula))
-      };
+      const estudiante=studentFrom(row,person,periodoId,cedula);
       // Si existe más de una matrícula para una cédula en el mismo período,
       // mantener una sola identidad sin fabricar estudiantes.
       if(!selected.has(cedula))selected.set(cedula,estudiante);
@@ -145,7 +172,7 @@ function createReader(provider=fromSDK){
       access:'lectura-directa-sin-sesion'
     };
   }
-  return {loadStudents,readMatriculas,readPeople};
+  return {loadStudents,loadDocumentStudent,readMatriculas,readPeople};
 }
 function status(){
   const {db}=fromSDK();
@@ -153,4 +180,4 @@ function status(){
     mode:'Firestore Lite · lectura directa bajo reglas desplegadas; sin autenticación ni escrituras'};
 }
 const reader=createReader();
-module.exports={loadStudents:reader.loadStudents,status,createReader,validPeriod,validId,nameOf,first,explain,FIREBASE_CONFIG};
+module.exports={loadStudents:reader.loadStudents,loadDocumentStudent:reader.loadDocumentStudent,status,createReader,validPeriod,validId,nameOf,first,explain,FIREBASE_CONFIG};

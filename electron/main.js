@@ -120,8 +120,8 @@ async function savePDF(event, input) {
 
 async function exportCronogramaPDF(event,input){
  verifySender(event);
- // Todas las fechas y actividades se validan de nuevo del lado de Electron.
- const data=CronModel.validate(input);
+ const previous=input?.reprintId?await CronNumbers.getIssued(input.reprintId):null;
+ const data=previous?.documento||CronModel.validate(input);
  const owner=BrowserWindow.fromWebContents(event.sender);
  const suggested='Memorando_MEM-ITSQMET-UTET-'+data.fecha.slice(0,7)+'_Cronograma_Articulo.pdf';
  const {canceled,filePath}=await dialog.showSaveDialog(owner,{
@@ -131,7 +131,7 @@ async function exportCronogramaPDF(event,input){
  if(canceled||!filePath)return {canceled:true};
  // Numerar solo después de que el usuario elija dónde guardar.
  // Firebase conserva el contenido emitido; las reimpresiones mantienen el folio.
- const issued=await CronNumbers.issue(data);
+ const issued=previous||await CronNumbers.issue(data);
  const html=CronModel.render(issued.documento,issued.folio);
  if(html.length>MAX_HTML)throw Error('Memorando demasiado extenso para imprimir.');
  const printer=new BrowserWindow({show:false,webPreferences:{
@@ -324,6 +324,10 @@ else {
   ipcMain.handle('utet:antiplagio-save',(event,record)=>{verifySender(event);return saveAntiplagioRecord(record);});
   ipcMain.handle('utet:antiplagio-export',exportAntiplagio);
   ipcMain.handle('utet:firebase-students',(event,periodoId)=>{verifySender(event);return Firebase.loadStudents(periodoId);});
+ ipcMain.handle('utet:document-student',(event,periodoId,cedula,includeRequirements)=>{
+  verifySender(event);
+  return Firebase.loadDocumentStudent(periodoId,cedula,includeRequirements===true);
+ });
   ipcMain.handle('utet:firebase-status',(event)=>{verifySender(event);return Firebase.status();});
   ipcMain.handle('utet:excel-template',(event,spec)=>{verifySender(event);return Excel.downloadTemplate(event,spec);});
   ipcMain.handle('utet:excel-import',(event,spec)=>{verifySender(event);return Excel.importWorkbook(event,spec);});

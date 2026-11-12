@@ -40,7 +40,9 @@ async function list(periodoId,modo='trabajo'){
   try{const snap=await getDocs(query(collection(firestore(),RECORDS),where('periodoId','==',periodoId),limit(5000)));return snap.docs.map(x=>x.data()).filter(x=>(x.tipoDocumento||'trabajo')===modo);}catch(e){return explain(e);}
 }
 async function save(input){
- const record=safeRecord(input),id=key(record.periodoId,record.cedula,record.tipoDocumento),month=record.fecha.slice(0,7),database=firestore();
+ const record=safeRecord(input);
+ if(record.origen!=='real')throw Error('La emisión exige un resultado de similitud real.');
+ const id=key(record.periodoId,record.cedula,record.tipoDocumento),month=record.fecha.slice(0,7),database=firestore();
  const recordRef=doc(database,RECORDS,id),counterRef=doc(database,COUNTERS,month),referenceRef=doc(database,REFCOUNTERS,month);
  try{return await runTransaction(database,async tx=>{
    const previous=await tx.get(recordRef);

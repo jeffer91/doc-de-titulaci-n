@@ -110,14 +110,18 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
    [['unknown','Sin datos'],['detected','Coincidencia'],['not-detected','Sin coincidencia']].map(([k,v])=>
     '<option value="'+k+'"'+(row.fuentes?.[s.key]===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label>').join('')+'</div>';
  }
+ function similarityStatus(row){
+  if(M.number(row.similitud)===null)return 'PENDIENTE';
+  return M.similarityApproved(row.similitud,session.tipoDocumento)?'APROBADO':'NO APROBADO';
+ }
  function editTable(){
   if(!session.selected.size)return '<p class="ap-empty">Selecciona uno o varios estudiantes.</p>';
   return '<div class="ap-table-wrap"><table class="ap-edit-table"><thead><tr><th>Estudiante</th><th>Similitud</th><th>Origen</th><th>Documento</th><th>Fuentes</th><th></th></tr></thead><tbody>'+
    selected().map(row=>{
     const norm=M.normalizeCareer(row.carreraNombre,row.modalidad);
     return '<tr><td class="ap-identity"><strong>'+esc(row.nombres)+'</strong><small>'+esc(row.cedula)+' · '+esc(norm.carrera)+' · '+esc(norm.modalidad)+'</small></td>'+
-     '<td><input type="text" inputmode="decimal" data-ap-id="'+esc(row.cedula)+'" data-ap-field="similitud" value="'+esc(row.similitud)+'"><small class="ap-status">'+esc(M.number(row.similitud)!==null&&(session.tipoDocumento==='articulo'?M.number(row.similitud)<=20:M.number(row.similitud)<20)?'APROBADO':'NO APROBADO')+'</small></td>'+
-     '<td><select data-ap-id="'+esc(row.cedula)+'" data-ap-field="origen"><option value="simulado"'+(row.origen==='simulado'?' selected':'')+'>Simulación</option><option value="real"'+(row.origen==='real'?' selected':'')+'>Dato real</option></select></td>'+
+     '<td><input type="text" inputmode="decimal" data-ap-id="'+esc(row.cedula)+'" data-ap-field="similitud" value="'+esc(row.similitud)+'"><small class="ap-status">'+similarityStatus(row)+'</small></td>'+
+     '<td><select data-ap-id="'+esc(row.cedula)+'" data-ap-field="origen"><option value="">Selecciona origen</option>'+(row.origen==='simulado'?'<option value="simulado" selected>Simulación anterior</option>':'')+'<option value="real"'+(row.origen==='real'?' selected':'')+'>Dato real</option></select></td>'+
      '<td><small>'+esc(row.folio||'Sin emitir')+'</small><small>'+esc(row.referencia||'Referencia por asignar')+'</small></td>'+
      '<td>'+btn('ap-sources',session.showSources===row.cedula?'Ocultar':'Fuentes','ap-link',row.cedula)+(session.showSources===row.cedula?sources(row):'')+'</td>'+
      '<td>'+btn('ap-one','PDF','ap-link',row.cedula)+' '+btn('ap-remove','Quitar','ap-link',row.cedula)+'</td></tr>';
@@ -138,18 +142,19 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
     btn('ap-zip',session.busy?'Generando...':'Descargar ZIP')+'</div>'+
     '<p class="ap-mini">Los archivos se descargan directamente en Descargas.</p></section></div>';
  }
+ function selectStudent(student){
+  const stored=session.saved.get(student.cedula),base=M.createRow(student);
+  const row=stored?{...base,...stored,fuentes:{...base.fuentes,...stored.fuentes}}:
+   {...base,...student,origen:'',tipoDocumento:session.tipoDocumento,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'};
+  if(stored?.origen==='simulado'){row.similitud='';row.fuentes=base.fuentes;}
+  session.selected.set(student.cedula,row);
+  if(row.syncStatus==='pendiente')session.dirty.add(student.cedula);
+ }
  function addOne(id){
   const student=session.students.find(s=>s.cedula===id);
   if(!student)return;
   if(session.selected.has(id))session.selected.delete(id);
-  else{
-   const stored=session.saved.get(id);
-   const base=M.createRow(student);
-   const specimen=M.example(session.tipoDocumento==='articulo'?'articulo__'+student.estudianteId:student.estudianteId);
-   session.selected.set(id,stored?{...base,...stored,fuentes:{...base.fuentes,...stored.fuentes}}:
-     {...base,...student,...specimen,tipoDocumento:session.tipoDocumento,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});
-  }
-  if(session.selected.get(id)?.syncStatus==='pendiente')session.dirty.add(id);
+  else selectStudent(student);
   session.saveError='';render();
  }
 
@@ -161,10 +166,11 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   const p=state.periodId,modo=session.tipoDocumento;
   session.busy=true;session.saveError='';render();
   try{
+   const incomplete=rows.find(row=>row.origen!=='real'||M.number(row.similitud)===null);
+   if(incomplete)throw Error('Registra y confirma el porcentaje real de similitud de '+incomplete.nombres+' antes de emitir.');
    const files=[];
    for(const row of rows){
     if(state.periodId!==p||session.tipoDocumento!==modo)throw Error('El período o documento cambió durante la exportación.');
-    if(M.number(row.similitud)===null)throw Error('Porcentaje inválido para '+row.nombres);
     const id=modo+'__'+p+'__'+row.cedula,timer=session.draftTimers.get(id);
     if(timer){clearTimeout(timer.timer);session.draftTimers.delete(id);}
     if(session.draftWrites.has(id))await session.draftWrites.get(id);
@@ -200,11 +206,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   else if(a==='ap-remove'){session.selected.delete(id);render();}
   else if(a==='ap-clear'){session.selected.clear();render();}
   else if(a==='ap-sources'){session.showSources=session.showSources===id?'':id;render();}
-  else if(a==='ap-add-filtered'){filtered().forEach(s=>{
-   if(!session.selected.has(s.cedula)){const old=session.saved.get(s.cedula),base=M.createRow(s),example=M.example(session.tipoDocumento==='articulo'?'articulo__'+s.estudianteId:s.estudianteId);
-    session.selected.set(s.cedula,old?{...base,...old,fuentes:{...base.fuentes,...old.fuentes}}:
-      {...base,...s,...example,tipoDocumento:session.tipoDocumento,fecha:M.periodDate(state.periodId),periodoNombre:period().label,versionPlantilla:'2'});}
-   });render();}
+  else if(a==='ap-add-filtered'){filtered().filter(s=>!session.selected.has(s.cedula)).forEach(selectStudent);render();}
   else if(a==='ap-one'){const item=session.selected.get(id);if(item)exportDocs([item],'pdfs');}
   else if(a==='ap-pdfs')exportDocs(selected(),'pdfs');
   else if(a==='ap-zip')exportDocs(selected(),'zip');
@@ -219,7 +221,7 @@ window.UTET_ANTIPLAGIO=Object.freeze({create:function createAntiplagio(ctx){
   if(t.dataset.apField){
    if(t.dataset.apField==='similitud'||t.dataset.apField==='origen')row[t.dataset.apField]=t.value;
    if(t.dataset.apField==='similitud'){const label=t.closest('td')?.querySelector('.ap-status');
-     if(label)label.textContent=M.number(row.similitud)!==null&&(session.tipoDocumento==='articulo'?M.number(row.similitud)<=20:M.number(row.similitud)<20)?'APROBADO':'NO APROBADO';}
+     if(label)label.textContent=similarityStatus(row);}
   }
   if(t.dataset.apSource)row.fuentes[t.dataset.apSource]=t.value;
   if(t.dataset.apField||t.dataset.apSource){

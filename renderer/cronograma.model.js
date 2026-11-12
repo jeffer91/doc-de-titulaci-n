@@ -29,21 +29,34 @@
     if(/clase|metodolog[ií]a|refuerzo|requisito/.test(s))return 'Clases';
     return 'Actividades académicas';
   }
-  const periodKey=s=>trim(s,150).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
-    .replace(/[–—]/g,'-').replace(/\s+/g,' ').trim();
-  function validate(raw){
+  const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const monthLabel=/^(enero|ene|febrero|feb|marzo|mar|abril|abr|mayo|may|junio|jun|julio|jul|agosto|agos|ago|septiembre|setiembre|sept|sep|set|octubre|oct|noviembre|nov|diciembre|dic)\.?(?:\s+de)?\s+(\d{4})$/;
+  function periodKey(value){
+    const text=trim(value,150).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[–—]/g,'-');
+    const explicit=/^(\d{4})-(0[1-9]|1[0-2])__(\d{4})-(0[1-9]|1[0-2])$/.exec(text);
+    const ends=explicit?[explicit[1]+'-'+explicit[2],explicit[3]+'-'+explicit[4]]:
+      text.split(/\s*-\s*|\s+(?:a|al|hasta)\s+/).map(part=>{
+        const match=monthLabel.exec(part.trim());
+        if(!match)return '';
+        const name=match[1].slice(0,3),month=months.indexOf(name==='set'?'sep':name)+1;
+        return match[2]+'-'+String(month).padStart(2,'0');
+      });
+    return ends.length===2&&ends[0]&&ends[1]&&ends[0]<=ends[1]?ends.join('__'):'';
+  }
+  function validate(raw,{legacy=false}={}){
     if(!raw||typeof raw!=='object')throw Error('Faltan los datos del memorando.');
     const fecha=trim(raw.fecha,10),id=trim(raw.id,120),periodo=trim(raw.periodo,150);
     if(!validDate(fecha))throw Error('La fecha de emisión debe ser válida.');
     if(!/^[a-zA-Z0-9_-]{6,120}$/.test(id))throw Error('Identificador del memorando no válido.');
-    if(!periodo)throw Error('Indica el período académico del memorando.');
+    const period=periodKey(periodo);
+    if(!periodo||(!legacy&&!period))throw Error('Indica un período académico con meses y años en orden cronológico.');
     if(!Array.isArray(raw.cronogramas)||!raw.cronogramas.length||raw.cronogramas.length>24)throw Error('Selecciona entre 1 y 24 cronogramas.');
     let count=0;
     const cronogramas=raw.cronogramas.map((item,index)=>{
       const grupo=trim(item.grupo,100),hoja=trim(item.hoja,100);
       if(!grupo||/^por determinar$/i.test(grupo))throw Error('Indica el grupo real del anexo '+(index+1)+' antes de emitir.');
       const sourcePeriod=trim(item.periodo,150);
-      if(sourcePeriod&&periodKey(sourcePeriod)!==periodKey(periodo))throw Error('El período del anexo '+(index+1)+' ('+grupo+') no coincide con el período del memorando. Revisa ambos.');
+      if(!legacy&&periodKey(sourcePeriod)!==period)throw Error('El período del anexo '+(index+1)+' ('+grupo+') está incompleto o no coincide con el memorando.');
       if(!Array.isArray(item.actividades)||!item.actividades.length||item.actividades.length>250)throw Error('Cronograma sin actividades válidas o demasiado grande: '+grupo);
       const actividades=item.actividades.map((a,i)=>{
         const actividad=trim(a.actividad,350),inicio=trim(a.inicio,10),fin=trim(a.fin,10);
@@ -51,7 +64,7 @@
         count++;
         return {etapa:stage(actividad,a.etapa),actividad,inicio,fin};
       });
-      return {grupo,hoja,actividades};
+      return {grupo,hoja,periodo:sourcePeriod||periodo,actividades};
     });
     if(count>1200)throw Error('Hay demasiadas actividades en los anexos.');
     return {id,fecha,periodo,cronogramas};
@@ -109,7 +122,7 @@
     return page(body,'cron-annex');
   }
   function render(input,code){
-    const doc=validate(input),folio=trim(code||input.code||'',80);
+    const doc=validate(input,{legacy:true}),folio=trim(code||input.code||'',80);
     doc.code=folio||'PENDIENTE DE EMISIÓN';
     let result=front(doc,folio);
     doc.cronogramas.forEach((item,index)=>{
@@ -117,5 +130,5 @@
     });
     return '<div class="institutional-document cron-document">'+result+'</div>';
   }
-  return Object.freeze({validate,render,stage,validDate,prettyDate,chunks,boundaries});
+  return Object.freeze({validate,render,stage,validDate,prettyDate,chunks,boundaries,periodKey});
 });

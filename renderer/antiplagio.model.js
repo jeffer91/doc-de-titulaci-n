@@ -21,6 +21,10 @@
     return Number.isFinite(n)&&n>=0&&n<=100?n:null;
   };
   const pformat=x=>number(x)===null?'Sin registro':number(x).toLocaleString('es-EC',{maximumFractionDigits:2})+' %';
+  function similarityApproved(value,tipoDocumento){
+    const n=number(value);
+    return n!==null&&(tipoDocumento==='articulo'?n<=20:tipoDocumento==='trabajo'&&n<20);
+  }
   const isDate=x=>{
     const s=t(x);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
@@ -312,7 +316,7 @@
     const documento=esArticulo?'artículo académico':'trabajo de titulación';
     const objeto=esArticulo?'artículo académico':'trabajo';
     const asunto=esArticulo?'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL ARTÍCULO ACADÉMICO':'RESULTADO DEL ANÁLISIS DE SIMILITUD DEL TRABAJO DE TITULACIÓN';
-    const n=number(row.similitud),ok=n!==null&&(esArticulo?n<=20:n<20);
+    const n=number(row.similitud),ok=similarityApproved(n,tipoDocumento);
     const norm=normalizeCareer(row.carreraNombre,row.modalidad),sourceFlags=row.fuentes||{};
     const values=SOURCE_TYPES.map(x=>({key:x.key,label:x.label,active:sourceFlags[x.key]==='detected',state:sourceFlags[x.key]||'unknown'}));
     const ratio=n===null?0:n,display=pformat(row.similitud);
@@ -375,7 +379,9 @@
     return '<div class="institutional-document inst-antiplagio">'+first+second+'</div>';
   }
 
-  root.UTET_ANTIPLAGIO_MODEL=Object.freeze({
-    SOURCE_TYPES,E,number,pformat,day,createRow,rowState,validate,group,summary,renderPDF,escapeFilename,periodDate,normalizeCareer,example,individualHTML
+  const api=Object.freeze({
+    SOURCE_TYPES,E,number,similarityApproved,pformat,day,createRow,rowState,validate,group,summary,renderPDF,escapeFilename,periodDate,normalizeCareer,example,individualHTML
   });
-})(typeof window!=='undefined'?window:globalThis);
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  if(root)root.UTET_ANTIPLAGIO_MODEL=api;
+})(typeof window!=='undefined'?window:null);

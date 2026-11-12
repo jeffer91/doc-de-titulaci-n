@@ -35,6 +35,8 @@ assert.equal(make({notas:{...notas,notaArticulo:6.99}}).eligible,false);
 assert.equal(make({notas:{...notas,notaDefensa:6.99}}).eligible,false);
 assert.equal(make({requisitos:{...requirements,valores:{...reqValues,Ingles:'PENDIENTE'}}}).eligible,false);
 assert.equal(make({notas:null}).eligible,false);
+assert.equal(make({matricula:null}).eligible,false);
+assert.equal(make({matricula:{...matricula,estadoMatricula:'RETIRADO'}}).eligible,false);
 assert.equal(make({matricula:{...matricula,modalidadTitulacion:'EXAMEN_COMPLEXIVO'},notas:{...notas,modalidadTitulacion:''}}).eligible,false);
 const sample={
  modalidad:'ARTICULO_ACADEMICO',periodoId:p,cedula,numeroActa:'AA-2026-0105-05-0129',
@@ -107,7 +109,7 @@ assert.ok(!cxHtml.includes('Firmado electrónicamente'),'No se simulan sellos de
 assert.equal(A.filename(cxSample),'ACTA_COMPLEX_0106832819_CX-2026-0106-05-0009.pdf');
 // ---- Trabajo de Titulación (PRO-164): notas de trabajo escrito y defensa, similitud del memorando de trabajo. ----
 const ttNotas={periodoId:p,cedula,notaEscrito:8.5,notaDefensa:7,modalidadTitulacion:'TRABAJO_TITULACION'};
-const ttMake=(o={})=>E.assess({requisitos:requirements,notas:ttNotas,matricula:{periodoId:p,cedula,modalidadTitulacion:'TRABAJO_TITULACION'},antiplagio:plagio,periodoId:p,cedula,modalidad:'TRABAJO_TITULACION',...o});
+const ttMake=(o={})=>E.assess({requisitos:requirements,notas:ttNotas,matricula:{periodoId:p,cedula,modalidadTitulacion:'TRABAJO_TITULACION'},antiplagio:{...plagio,similitud:'19.99'},periodoId:p,cedula,modalidad:'TRABAJO_TITULACION',...o});
 const tt=ttMake();
 assert.equal(tt.eligible,true);
 assert.deepEqual(Object.keys(tt.checks),['trabajo','defensa','similitud','modalidad']);
@@ -115,6 +117,7 @@ assert.equal(tt.approvals[1].label,'Aprobación del trabajo de titulación');
 assert.equal(ttMake({notas:{...ttNotas,notaEscrito:6.9}}).eligible,false);
 assert.equal(ttMake({notas:{...ttNotas,notaEscrito:null,notaArticulo:9}}).eligible,false,'La nota de artículo no sustituye la del trabajo');
 assert.equal(ttMake({antiplagio:{...plagio,similitud:'20.5'}}).eligible,false);
+assert.equal(ttMake({antiplagio:{...plagio,similitud:'20.00'}}).eligible,false);
 assert.equal(ttMake({antiplagio:null}).eligible,false);
 assert.equal(ttMake({notas:{...ttNotas,modalidadTitulacion:'ARTICULO_ACADEMICO'}}).eligible,false);
 const ttSample={...sample,modalidad:'TRABAJO_TITULACION',numeroActa:'TT-2026-0105-05-0001',requisitos:tt.requirements,aprobaciones:tt.approvals,comprobaciones:tt.checks};

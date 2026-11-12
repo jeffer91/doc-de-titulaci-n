@@ -5,7 +5,7 @@
  * No emite números locales oficiales ni reinicia un mes al cambiar período.
  */
 const {initializeApp,getApps}=require('firebase/app');
-const {getFirestore,doc,runTransaction}=require('firebase/firestore');
+const {getFirestore,doc,getDocFromServer,runTransaction}=require('firebase/firestore');
 const Model=require('../renderer/cronograma.model.js');
 const CONFIG={apiKey:'AIzaSyCaHf1C0BB0X_H3BDZ1o-UDAsPmLTjsZLA',authDomain:'utet-4387a.firebaseapp.com',projectId:'utet-4387a',appId:'1:902848131454:web:47f515eb6480834724c32f'};
 const APP='utet-cronograma-memorandos';
@@ -19,6 +19,14 @@ function code(month,number){
 function explain(err){
  if(/permission-denied|unauthenticated/.test(String(err?.code||'')))throw Error('Firestore no permite emitir este memorando. Se conserva el borrador; solicita habilitar acceso institucional protegido para el registro de cronogramas y correlativos.');
  throw err;
+}
+async function getIssued(id){
+ if(!/^[a-zA-Z0-9_-]{6,120}$/.test(String(id||'')))throw Error('Identificador del memorando no válido.');
+ try{
+  const snapshot=await getDocFromServer(doc(firestore(),RECORDS,id)),record=snapshot.exists()?snapshot.data():null;
+  if(!record?.folio||record.documento?.id!==id)throw Error('No se encontró el memorando emitido.');
+  return {folio:record.folio,numero:record.numero,documento:record.documento,alreadyIssued:true};
+ }catch(err){return explain(err);}
 }
 async function issue(input){
  const data=Model.validate(input),month=data.fecha.slice(0,7);
@@ -38,4 +46,4 @@ async function issue(input){
   return {folio,numero:number,documento:data,alreadyIssued:false};
  });}catch(err){return explain(err);}
 }
-module.exports={issue,code,RECORDS,COUNTERS};
+module.exports={issue,getIssued,code,RECORDS,COUNTERS};

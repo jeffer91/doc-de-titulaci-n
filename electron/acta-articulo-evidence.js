@@ -12,6 +12,7 @@ const REQS=Object.freeze([
  ['Titulacion','Titulación',['Titulacion','Titulación']]
 ]);
 const Modalidades=require('../renderer/acta-titulacion.modalidades.js');
+const {similarityApproved}=require('../renderer/antiplagio.model.js');
 const APPROVALS=Object.freeze([
  ['AprobacionTitulacion','Aprobación de titulación',['AprobacionTitulacion']],
  ['AprobacionComplexivoProyecto','Aprobación del artículo académico',['AprobacionComplexivoProyecto']]
@@ -30,13 +31,17 @@ function field(doc,names){
  for(const n of names){if(d[n]!==undefined&&d[n]!==null&&d[n]!=='')return d[n];}
  return null;
 }
+const requirementRows=values=>REQS.map(([key,label,aliases])=>({key,label,status:state(lookup(values,aliases))}));
+const withdrawn=row=>row?.retirado===true||/retirad/i.test(String(row?.estadoMatricula||''));
 function assess({requisitos,notas,antiplagio,matricula,periodoId,cedula,modalidad=Modalidades.DEFAULT}){
  const cfg=Modalidades.get(modalidad);
  const issue=[];
  const validDocument=(row)=>row&&!row.eliminado&&String(row.periodoId||'')===periodoId&&String(row.cedula||'')===cedula;
+ const activeEnrollment=validDocument(matricula)&&!withdrawn(matricula);
+ if(!activeEnrollment)issue.push('No consta una matrícula activa para este estudiante y período.');
  if(!validDocument(requisitos))issue.push('No se encontraron requisitos académicos vigentes para este estudiante y período.');
  const values=validDocument(requisitos)?requisitos.valores||{}:{};
- const rows=REQS.map(([key,label,aliases])=>({key,label,status:state(lookup(values,aliases))}));
+ const rows=requirementRows(values);
  const approvals=approvalsFor(cfg).map(([key,label,aliases])=>({key,label,status:state(lookup(values,aliases))}));
  for(const row of [...rows,...approvals])if(row.status!=='CUMPLE')issue.push(row.label+': '+row.status);
  const checks={};
@@ -55,13 +60,14 @@ function assess({requisitos,notas,antiplagio,matricula,periodoId,cedula,modalida
  if(cfg.requiresSimilarity){
   const pl=validDocument(antiplagio)?antiplagio:null;
   const similarity=pl?number(pl.similitud):null;
-  const plagioOK=similarity!==null&&similarity>=0&&similarity<=20&&pl.origen==='real';
-  if(!plagioOK)issue.push('No consta un análisis real de similitud de '+cfg.antiplagioLabel+' dentro del máximo 20,00 %.');
+  const kind=cfg.id==='ARTICULO_ACADEMICO'?'articulo':'trabajo';
+  const plagioOK=pl?.origen==='real'&&similarityApproved(pl.similitud,kind);
+  if(!plagioOK)issue.push('No consta un análisis real de similitud de '+cfg.antiplagioLabel+' que cumpla el criterio '+(kind==='articulo'?'de hasta 20,00 %.':'inferior a 20,00 %.'));
   checks.similitud=similarity===null?'SIN DATO':plagioOK?'CUMPLE':'NO CUMPLE';
  }
  // La modalidad se toma de la ficha de notas o de la matrícula; nunca se asume.
  const registered=(notesOK?field(notas,['modalidadTitulacion','modalidad']):null)||
-  (validDocument(matricula)?field(matricula,['modalidadTitulacion']):null)||
+  (activeEnrollment?field(matricula,['modalidadTitulacion']):null)||
   (validDocument(requisitos)?field(requisitos,['modalidadTitulacion']):null);
  const modeOK=new RegExp(cfg.modePattern).test(norm(registered));
  if(!modeOK)issue.push('No está acreditada la modalidad '+cfg.label+'.');
@@ -76,4 +82,4 @@ function assess({requisitos,notas,antiplagio,matricula,periodoId,cedula,modalida
   source:'Firebase: '+consulted.join(', ')
  };
 }
-module.exports={REQS,APPROVALS,approvalsFor,norm,state,assess};
+module.exports={REQS,APPROVALS,approvalsFor,requirementRows,withdrawn,norm,state,assess};

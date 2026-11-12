@@ -3,6 +3,7 @@
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const ExcelJS=require('exceljs');
+const {validDate}=require('../renderer/cronograma.model.js');
 const MAX_FILE=10*1024*1024;
 const text=x=>String(x==null?'':x).trim();
 const plain=x=>{
@@ -11,8 +12,7 @@ const plain=x=>{
   if(x instanceof Date)return x;
   if(x.richText)return x.richText.map(y=>y.text||'').join('');
   if(x.text)return x.text;
-  if(x.result!==undefined && !x.formula && !x.sharedFormula)return x.result;
-  if(x.formula||x.sharedFormula)return '';
+  if(x.result!==undefined)return plain(x.result);
   return '';
  }
  return x;
@@ -23,13 +23,16 @@ function excelDate(value,date1904=false){
  if(v instanceof Date&&!Number.isNaN(v.getTime()))return v.toISOString().slice(0,10);
  if(typeof v==='number'&&v>=15000&&v<90000){
   const base=Date.UTC(date1904?1904:1899,date1904?0:11,date1904?1:30);
-  return new Date(base+Math.round(v)*86400000).toISOString().slice(0,10);
+  return new Date(base+Math.floor(v)*86400000).toISOString().slice(0,10);
  }
  if(typeof v==='string'){
   const s=v.trim();
-  if(/^\d{4}-\d\d-\d\d$/.test(s))return s;
+  if(validDate(s))return s;
   const d=/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(s);
-  if(d)return d[3]+'-'+d[2].padStart(2,'0')+'-'+d[1].padStart(2,'0');
+  if(d){
+   const date=d[3]+'-'+d[2].padStart(2,'0')+'-'+d[1].padStart(2,'0');
+   if(validDate(date))return date;
+  }
  }
  return '';
 }
@@ -79,7 +82,6 @@ function parseSheet(ws,filename,date1904){
   if(/^actividad$/.test(a)||/^(total|subtotal|numero de estudiantes)/.test(a))continue;
   const ini=excelDate(get(r,startCol),date1904),fin=excelDate(get(r,endCol),date1904);
   if(/^fase\s*\d|^etapa\s*\d/.test(a)&&!ini&&!fin){fase=activity;continue;}
-  if(!ini&&!fin){continue;}
   if(!ini||!fin||fin<ini){invalid++;if(warnings.length<8)warnings.push('Fila '+r+': fecha incompleta, inválida o invertida.');continue;}
   actividades.push({etapa:fase,actividad:activity.slice(0,350),inicio:ini,fin});
   if(actividades.length>=250){warnings.push('Límite de 250 actividades alcanzado.');break;}

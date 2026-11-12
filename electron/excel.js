@@ -64,6 +64,7 @@ async function downloadTemplate(event,spec){
     ['Documento',safe(spec.title)],
     ['Período',safe(spec.periodLabel)],
     ['Tipo',safe(spec.typeId)],
+    ['ID de período',safe(spec.periodId)],
     ['Uso','Escribir una fila por registro en la hoja Datos. No cambiar los nombres de las columnas.'],
     ['Fechas','Escribir AAAA-MM-DD.'],
     ['Horas','Escribir HH:MM en formato de 24 horas.'],
@@ -88,29 +89,44 @@ async function importWorkbook(event,spec){
   if(stat.size>MAX_FILE)throw new Error('El Excel supera el límite de 10 MB.');
   const workbook=new ExcelJS.Workbook();
   await workbook.xlsx.load(await fs.readFile(target));
+  return {canceled:false,fileName:path.basename(target),...readWorkbook(workbook,spec)};
+}
+function readWorkbook(workbook,spec){
+  validSpec(spec);
+  const help=workbook.getWorksheet('Instrucciones'),metadata=new Map();
+  help?.eachRow(row=>metadata.set(safe(row.getCell(1).value),safe(row.getCell(2).value)));
+  if(metadata.get('Tipo')&&metadata.get('Tipo')!==spec.typeId)throw Error('El Excel corresponde a otro tipo documental.');
+  const workbookPeriod=metadata.get('ID de período');
+  const label=metadata.get('Período');
+  if((workbookPeriod&&workbookPeriod!==spec.periodId)||(!workbookPeriod&&label&&label!==spec.periodLabel))
+    throw Error('El período del Excel no coincide con el período seleccionado.');
   const sheet=workbook.getWorksheet('Datos');
   if(!sheet)throw new Error('No se encontró la hoja Datos de la plantilla.');
-  for(let col=0;col<spec.columns.length;col++){
-    if(safe(sheet.getRow(1).getCell(col+1).value)!==spec.columns[col].label)throw new Error('El encabezado de la columna '+String(col+1)+' no corresponde a esta plantilla.');
-  }
-  const extras=sheet.getRow(1).cellCount;
-  if(extras>spec.columns.length)throw new Error('La hoja contiene columnas adicionales. Usa la plantilla original.');
+  const byLabel=new Map(spec.columns.map(col=>[col.label,col])),positions=new Map(),seen=new Set();
+  sheet.getRow(1).eachCell((cell,index)=>{
+    const label=safe(cell.value),column=byLabel.get(label);
+    if(!column||seen.has(column.key))throw Error('El encabezado de la columna '+index+' es desconocido o está repetido.');
+    positions.set(index,column);seen.add(column.key);
+  });
+  const missing=spec.columns.filter(col=>col.required&&!seen.has(col.key));
+  if(missing.length||!positions.size)throw Error('Faltan columnas obligatorias: '+missing.map(col=>col.label).join(', ')+'.');
   if(sheet.actualRowCount>MAX_ROWS+1)throw new Error('Hay demasiadas filas. Máximo 2500 registros.');
   const rows=[],errors=[];
-  for(let line=2;line<=sheet.rowCount;line++){
-    const excelRow=sheet.getRow(line);let row={},populated=false,issue=null;
-    for(let j=0;j<spec.columns.length;j++){
+  sheet.eachRow((excelRow,line)=>{
+    if(line===1)return;
+    const row={};let populated=false,issue=null;
+    for(const [index,col] of positions){
       try{
-        const col=spec.columns[j],v=getValue(excelRow.getCell(j+1),col);
+        const v=getValue(excelRow.getCell(index),col);
         if(v)populated=true;
         row[col.key]=v;
       }catch(e){issue=e.message;break;}
     }
-    if(issue){errors.push({line,message:issue});continue;}
-    if(!populated)continue;
+    if(issue){errors.push({line,message:issue});return;}
+    if(!populated)return;
     rows.push({line,data:row});
     if(rows.length>MAX_ROWS)throw new Error('El Excel supera las 2500 filas.');
-  }
-  return {canceled:false,fileName:path.basename(target),rows,errors};
+  });
+  return {rows,errors};
 }
-module.exports={downloadTemplate,importWorkbook,validSpec};
+module.exports={downloadTemplate,importWorkbook,readWorkbook,validSpec};

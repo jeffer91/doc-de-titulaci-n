@@ -21,7 +21,7 @@ const click=(action,id='')=>listeners.get('document:click')({target:{closest:()=
 const changePeriod=p=>listeners.get('period-select:change')({target:{value:p}});
 const tick=()=>new Promise(res=>setImmediate(res));
 const row=(p,c='0102030405',n='Ana Pérez')=>({estudianteId:p+'__'+c,periodoId:p,cedula:c,nombres:n,carreraId:'C01',carreraNombre:'ADMINISTRACIÓN ONLINE',modalidad:'En línea'});
-const mem=p=>({...row(p),similitud:'12.34',origen:'simulado',fecha:'2026-04-15',folio:'01 MEM-ITSQMET-UTET-2026-04-15',referencia:'UTET-ANT-2026-04-0001',fuentes:{google:'detected'},syncStatus:'sincronizado'});
+const mem=p=>({...row(p),similitud:'12.34',origen:'real',fecha:'2026-04-15',folio:'01 MEM-ITSQMET-UTET-2026-04-15',referencia:'UTET-ANT-2026-04-0001',fuentes:{google:'detected'},syncStatus:'sincronizado'});
 const packet=(p,students,records=[])=>({periodoId:p,students,records,hasCache:true,source:'SQLite local',syncedAt:'2026-11-07T13:00:00.000Z'});
 (async()=>{
  const [p,two]=window.UTET_DATA.periodos.map(x=>x.id);
@@ -93,6 +93,13 @@ const packet=(p,students,records=[])=>({periodoId:p,students,records,hasCache:tr
  await tick();await tick();
  assert.match(display(),/Trabajo de Titulación · PRO-164/);
  assert.doesNotMatch(display(),/Memorando guardado/,'El memorando de artículo no debe aparecer como trabajo');
+ const count=calls.export;
+ click('ap-add','0202020202');
+ click('ap-one','0202020202');
+ await tick();await tick();
+ assert.equal(calls.export,count);
+ assert.equal(calls.save,0);
+ assert.match(display(),/confirma el porcentaje real/);
 
  console.log('OK UI SQLite: apertura y cambios locales, refresh manual y reimpresión sin escritura Firebase.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('utetDesktop', Object.freeze({
   refreshAntiplagioPeriod: (periodoId,tipo='trabajo') => ipcRenderer.invoke('utet:antiplagio-refresh',periodoId,tipo),
   saveAntiplagioDraft: record => ipcRenderer.invoke('utet:antiplagio-draft',record),
   loadAntiplagioStudents: periodoId => ipcRenderer.invoke('utet:firebase-students',periodoId),
+  loadDocumentStudent: (periodoId,cedula,includeRequirements) => ipcRenderer.invoke('utet:document-student',periodoId,cedula,includeRequirements),
   antiplagioFirebaseStatus: () => ipcRenderer.invoke('utet:firebase-status'),
   downloadExcelTemplate: spec => ipcRenderer.invoke('utet:excel-template', spec),
   importExcel: spec => ipcRenderer.invoke('utet:excel-import', spec),

@@ -2,6 +2,14 @@
 
 Aplicación de escritorio de la Unidad de Titulación y Eficiencia Terminal (ITSQMET). Mantiene 6 períodos, 11 requisitos, 9 procesos y 24 tipos documentales.
 
+## Configuración documental
+
+En **Procesos → Datos**, cada documento abre su ficha con el alcance, la fuente y la salida prevista. Las tres actas de titulación, los dos memorandos de similitud y el cronograma de Artículo Académico abren sus pantallas de emisión.
+
+Los otros 18 documentos admiten formulario y carga Excel. La vista previa genera las tablas y secciones del tipo documental para revisión. Los consolidados agrupan registros por período y referencia, con convocatoria, sesión o corte cuando corresponde. Las plantillas descargadas conservan el período y el tipo documental. Las plantillas anteriores pueden cargarse con sus columnas obligatorias.
+
+Los formularios individuales pueden completar la ficha desde `matriculas` y `Estudiante`. Los informes de verificación también consultan `requisitos`. Los campos que no consten quedan pendientes o se capturan con su evidencia. Las solicitudes y planes de núcleo registran su referencia de SISACAD. El Informe Final registra el corte preparado en el módulo Inf de Requisitos y sus ocho apartados. Los registros de captura y los borradores se guardan en el perfil local.
+
 ## Identidad visual UTET
 
 El icono propio de la app muestra **documento, sello y birrete** en azul marino y dorado; es distinto del logotipo institucional que se conserva en los PDF.
@@ -32,11 +40,12 @@ Los documentos `acta-examen` (UTET-PRO-93) y `acta-trabajo` (UTET-PRO-164) compa
 | Modalidad | Prefijo del número | Identidad en `actas_registro` | Controles además de 9 requisitos + 2 aprobaciones CUMPLE |
 |---|---|---|---|
 | Artículo Académico (PRO-57) | `AA-AAAA-CCCC-MM-NNNN` | `AA__<periodo>__<cedula>` | artículo ≥7/10, defensa ≥7/10, similitud real ≤20 % (memorando `articulo__…`), modalidad `ARTICULO_ACADEMICO` |
-| Trabajo de Titulación (PRO-164) | `TT-AAAA-CCCC-MM-NNNN` | `TT__<periodo>__<cedula>` | trabajo escrito ≥7/10 (`notaEscrito`/`notaTrabajo`), defensa ≥7/10, similitud real ≤20 % (memorando de trabajo `<periodo>__<cedula>`), modalidad `TRABAJO_TITULACION` |
+| Trabajo de Titulación (PRO-164) | `TT-AAAA-CCCC-MM-NNNN` | `TT__<periodo>__<cedula>` | trabajo escrito ≥7/10 (`notaEscrito`/`notaTrabajo`), defensa ≥7/10, similitud real <20 % (memorando de trabajo `<periodo>__<cedula>`), modalidad `TRABAJO_TITULACION` |
 | Examen Complexivo (PRO-93) | `CX-AAAA-CCCC-MM-NNNN` | `CX__<periodo>__<cedula>` | solo modalidad `EXAMEN_COMPLEXIVO` acreditada; las calificaciones y oportunidades se administran en Ncomplex y no se consultan ni imprimen |
 
 - **Formato CX:** reproduce las actas de Complexivo de referencia (`CX-2026-0106-05-0009`, etc.): portada, constancia con «Modalidad de titulación: Examen Complexivo», nueve requisitos, apartado 3 con la nota sobre Ncomplex, y tercera hoja con «4. Aprobaciones institucionales» y «5. Constancia documental». No existe sección de condiciones académicas.
 - **Formato TT:** idéntico al AA, con «Aprobación del trabajo de titulación» y «5. Verificación de las condiciones académicas» para trabajo escrito, defensa, similitud y modalidad.
+- **Matrícula:** el acta comprueba que la matrícula siga activa en Firebase antes de emitir.
 - **Modalidad registrada:** se lee de `notas.modalidadTitulacion`, y en su defecto de `matriculas.modalidadTitulacion` o `requisitos.modalidadTitulacion`. Si ningún documento la registra, el acta queda bloqueada; nunca se asume por la carrera ni por el proceso desde el que se abrió la pantalla.
 - **Numeración:** las tres modalidades comparten el contador mensual `actas_contadores/<AAAA-MM>` y el libro `actas_numeros`, en una sola transacción; cada una conserva identidad y prefijo propios, de modo que un mismo estudiante no puede recibir dos actas de la misma modalidad en un período.
 - **Firmas:** la portada deja el espacio en blanco. No se reproducen los sellos «Firmado electrónicamente por…» que aparecen en los PDF de referencia porque esa firma debe aplicarse con el certificado legítimo de cada firmante.
@@ -83,7 +92,7 @@ Cada estudiante seleccionado recibe un memorando distinto; **ya no se emite un c
 - Siete tipos de fuente: Google, sitios web, repositorios académicos, publicaciones, documentos, trabajos académicos y repositorio institucional ITSQMET.
 - El resultado se clasifica conforme al criterio configurado para este proceso: **menor de 20 %** en rango; **20 % o superior** requiere corrección y una nueva presentación, sin plazo automático. Un índice de similitud no constituye por sí solo evidencia de plagio.
 - La fecha determinista de presentación es el **día 15 del mes siguiente al cierre del período**, trasladada al lunes siguiente si coincide con sábado o domingo. No contempla otros feriados nacionales. La fecha de memorando y del reporte es la misma y permanece constante al corregir.
-- Los registros nuevos ofrecen porcentajes y fuentes simulados para revisar el formato. Ese origen se conserva únicamente en los metadatos de la app; el PDF aprobado como plantilla no incluye marcas de agua ni leyendas de simulación. Antes de emitir documentos institucionales reales deben utilizarse porcentajes y fuentes procedentes de un análisis efectivo.
+- Los registros nuevos empiezan con el porcentaje vacío. El PDF y el consecutivo requieren un porcentaje ingresado y origen «Dato real». Para descargar un memorando anterior con origen simulado se debe ingresar el resultado real y confirmar su origen.
 - No existe casilla «Verificado», vista previa ni cuadro de confirmación final. La interfaz se mantiene compacta.
 - «PDF individuales» guarda automáticamente los archivos en la carpeta Descargas de Windows sin abrir selectores. «Descargar ZIP» guarda un único ZIP directamente en Descargas. El botón «PDF» junto a un estudiante descarga únicamente ese memorando. Si el nombre existe, añade (1), (2), etc., sin sobrescribir.
 - Los PDF se generan al descargar, **no se guardan en Firebase ni en SQLite**. Reimprimir un memorando sin cambios usa la copia local, no consulta ni escribe en Firebase.

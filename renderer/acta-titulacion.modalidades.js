@@ -35,11 +35,11 @@
    requiresNotes:true,requiresSimilarity:true,
    checks:['trabajo','defensa','similitud','modalidad'],
    statusLabels:{trabajo:'Trabajo de titulación · mínimo 7/10 acreditado',defensa:'Defensa · mínimo 7/10 acreditado',
-    similitud:'Similitud · máximo 20,00 % acreditado',modalidad:'Modalidad de titulación · Trabajo de Titulación'},
+    similitud:'Similitud · inferior a 20,00 % acreditada',modalidad:'Modalidad de titulación · Trabajo de Titulación'},
    section3:'La modalidad registrada es Trabajo de Titulación. Las evaluaciones del documento escrito y su defensa se han contrastado con los mínimos requeridos, pero sus calificaciones numéricas no se presentan en esta acta.',
    constancia:'Constan como CUMPLE los nueve requisitos institucionales y las dos aprobaciones finales, de acuerdo con el expediente académico verificado. También se acreditan las condiciones de trabajo escrito, defensa y similitud exigidas para esta modalidad.',
    endNote:'La presente acta deja constancia del cumplimiento documental y académico registrado para el proceso de titulación mediante Trabajo de Titulación.',
-   uiRule:'La emisión exige nueve requisitos y dos aprobaciones CUMPLE, trabajo escrito y defensa ≥7/10, y similitud real ≤20 %.'
+   uiRule:'La emisión exige nueve requisitos y dos aprobaciones CUMPLE, trabajo escrito y defensa ≥7/10, y similitud real inferior a 20 %.'
   }),
   EXAMEN_COMPLEXIVO:Object.freeze({
    id:'EXAMEN_COMPLEXIVO',docId:'acta-examen',prefix:'CX',proceso:'UTET-PRO-93',
