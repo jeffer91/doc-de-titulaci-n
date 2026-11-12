@@ -48,6 +48,14 @@
 .inst-data-table th{font-weight:bold;background:#fff}.inst-data-table tr{break-inside:avoid;page-break-inside:avoid}
 .inst-workflow-table td{white-space:pre-line;vertical-align:top}
 .inst-workflow-table th{background:#eef3f8}
+.inst-plan-figure{margin:0;color:#15334f}
+.inst-body-main .inst-plan-figure h3{font-size:13pt;margin:0 0 5mm}
+.inst-plan-chart{display:block;width:100%;height:auto;border:1px solid #dce5ee;border-radius:3mm}
+.inst-plan-figure figcaption,.inst-body-main .inst-plan-continuation{margin:3mm 0;font-size:9pt;color:#4e6178;white-space:pre-wrap;overflow-wrap:anywhere}
+.plan-assistant .plan-status{margin:0 0 10px;color:#475569;font-size:.875rem;line-height:1.5}
+.plan-assistant .plan-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.plan-assistant .plan-notice{margin:8px 0;color:#234565;font-size:.875rem;line-height:1.5}
+.plan-assistant .plan-notice[role=alert]{color:#8d332c}
 .inst-note{font-size:8pt;color:#666}
 .inst-letter{font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:1.4;padding:25mm 25mm 25mm 20mm}
 .inst-letter .inst-seal{right:25mm}

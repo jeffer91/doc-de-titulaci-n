@@ -8,6 +8,7 @@ const CronExcel = require('./cronograma-excel.js');
 const CronNumbers = require('./cronograma-numbering.js');
 const CronModel = require('../renderer/cronograma.model.js');
 const Firebase = require('./firebase-read.js');
+const PlanExamenIA = require('./plan-examen-ia.js');
 const Memo = require('./memo-numbering.js');
 const AntiplagioStore = require('./antiplagio-store.js');
 const AntiplagioLocal = require('./antiplagio-local.js');
@@ -331,6 +332,7 @@ else {
   ipcMain.handle('utet:firebase-status',(event)=>{verifySender(event);return Firebase.status();});
   ipcMain.handle('utet:excel-template',(event,spec)=>{verifySender(event);return Excel.downloadTemplate(event,spec);});
   ipcMain.handle('utet:excel-import',(event,spec)=>{verifySender(event);return Excel.importWorkbook(event,spec);});
+  ipcMain.handle('utet:plan-examen-redactar',(event,plan)=>{verifySender(event);return PlanExamenIA.redact(plan);});
   ipcMain.handle('utet:cronograma-import',(event)=>{verifySender(event);return CronExcel.importFiles(event);});
   ipcMain.handle('utet:cronograma-export',exportCronogramaPDF);
   createWindow();

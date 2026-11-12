@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('utetDesktop', Object.freeze({
   antiplagioFirebaseStatus: () => ipcRenderer.invoke('utet:firebase-status'),
   downloadExcelTemplate: spec => ipcRenderer.invoke('utet:excel-template', spec),
   importExcel: spec => ipcRenderer.invoke('utet:excel-import', spec),
+  redactPlanExamen: plan => ipcRenderer.invoke('utet:plan-examen-redactar',plan),
   importCronogramaFiles: () => ipcRenderer.invoke('utet:cronograma-import'),
   exportCronogramaPDF: data => ipcRenderer.invoke('utet:cronograma-export',data),
   getAntiplagioRecords: (periodoId,tipo='trabajo') => ipcRenderer.invoke('utet:antiplagio-list',periodoId,tipo),

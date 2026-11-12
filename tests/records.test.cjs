@@ -9,6 +9,8 @@ const {createReader}=require('../electron/firebase-read.js');
 const folder=path.join(__dirname,'..','renderer');
 const window={};
 vm.runInNewContext(fs.readFileSync(path.join(folder,'data.js'),'utf8'),{window});
+vm.runInNewContext(fs.readFileSync(path.join(folder,'plan-examen.model.js'),'utf8'),{window});
+vm.runInNewContext(fs.readFileSync(path.join(folder,'plan-examen.figures.js'),'utf8'),{window});
 vm.runInNewContext(fs.readFileSync(path.join(folder,'records.js'),'utf8'),{window});
 vm.runInNewContext(fs.readFileSync(path.join(folder,'institutional.js'),'utf8'),{window});
 const data=window.UTET_DATA,records=window.UTET_RECORDS;

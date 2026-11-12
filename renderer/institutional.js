@@ -81,6 +81,7 @@
     return chunks;
   }
   const table = (headers, rows, className='') => `<table class="inst-data-table ${className}"><thead><tr>${headers.map(h=>`<th>${E(h)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(row=>`<tr>${row.map(cell=>`<td>${E(cell)}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}" class="inst-pending">Sin registros cargados</td></tr>`}</tbody></table>`;
+  const printFigure=Symbol('figura generada por el documento');
   function documentBlocks(d,limit=32) {
     const blocks=[];
     let page='',used=0;
@@ -89,6 +90,11 @@
       page+=html;used+=weight;
     };
     for(const section of d.documentSections){
+      if(section?.[printFigure]){
+        if(page){blocks.push(page);page='';used=0;}
+        blocks.push(section[printFigure]);
+        continue;
+      }
       if(!section?.title)continue;
       const heading=title=>`<h3>${E(title)}</h3>`;
       if(!Array.isArray(section.headers)||!section.headers.length||!Array.isArray(section.rows)){
@@ -123,8 +129,28 @@
     if(page)blocks.push(page);
     return blocks.length?blocks:['<p class="inst-pending">Sin datos documentales registrados.</p>'];
   }
+  function planBlocks(d){
+    const plan=d.planExamen;
+    const summary=window.UTET_PLAN_EXAMEN.summarize(plan.rows);
+    const figures=window.UTET_PLAN_EXAMEN_FIGURES.render(plan,summary);
+    const sections=[
+      {title:'Introducción',text:plan.template.introduccion},
+      {title:'Base legal',text:plan.template.baseLegal},
+      {title:'Metodología',text:plan.template.metodologia},
+      {title:'Planificación del período',text:plan.text.contexto},
+      ...(d.documentSections||[]),
+      ...figures.map(markup=>({[printFigure]:markup})),
+      ...(d.contenido?[{title:'Información adicional',text:d.contenido}]:[]),
+      ...(d.observaciones?[{title:'Observaciones',text:d.observaciones}]:[]),
+      {title:'Conclusiones',text:plan.text.conclusiones},
+      {title:'Recomendaciones',text:plan.text.recomendaciones},
+      {title:'Referencias',text:plan.template.referencias}
+    ];
+    return documentBlocks({...d,documentSections:sections,contenido:'',observaciones:''});
+  }
   function contentBlocks(d,type) {
     const fam=familyFor(type),result=[];
+    if(type.id==='plan-examen'&&d.planExamen)return planBlocks(d);
     if(fam==='RGI' && type.id==='asistencia-induccion') {
       const r=splitRows(d.asistentes);
       const pieces=[];for(let i=0;i<r.length;i+=22)pieces.push(r.slice(i,i+22));
@@ -144,7 +170,8 @@
   }
   function contentPage(body,d,type,num,total) {
     const fam=familyFor(type);
-    return `<section class="inst-page inst-body-page" data-family="${fam}"><div class="inst-cont-header"><span>${E(d.unidad)}</span><span>${E(type.proceso)} · ${E(shownCode(d,type))}</span>${['INF','ACT'].includes(fam)?`<span>${pagination(num,total)}</span>`:''}</div><div class="inst-body-main">${body}</div><div class="inst-page-foot">Documento de maqueta · ${E(d.periodoLabel||'')} · No es una emisión oficial</div>${seal()}</section>`;
+    const numbered=['INF','ACT'].includes(fam)||type.id==='plan-examen'&&d.planExamen;
+    return `<section class="inst-page inst-body-page" data-family="${fam}"><div class="inst-cont-header"><span>${E(d.unidad)}</span><span>${E(type.proceso)} · ${E(shownCode(d,type))}</span>${numbered?`<span>${pagination(num,total)}</span>`:''}</div><div class="inst-body-main">${body}</div><div class="inst-page-foot">Documento de maqueta · ${E(d.periodoLabel||'')} · No es una emisión oficial</div>${seal()}</section>`;
   }
   function structuredDoc(d,type) {
     const fam=familyFor(type);
@@ -201,6 +228,13 @@
     }
     if(fam==='ACT' && type.id==='acta-reunion')for(const [key,label] of [['numeroActa','número de acta'],['lugar','lugar'],['horaInicio','hora de inicio'],['horaFin','hora de fin']])needed(key,label);
     if(fam==='RGI'&&type.id==='asistencia-induccion'&&!lines(d.asistentes).length)warnings.push('Todavía no se han registrado asistentes verificados.');
+    if(type.id==='plan-examen'&&d.planExamen){
+      const summary=window.UTET_PLAN_EXAMEN.summarize(d.planExamen.rows);
+      for(const [count,label] of [
+        [summary.pendingActivities,'sin descripción'],[summary.pendingDates,'con fechas pendientes'],
+        [summary.pendingResponsible,'sin responsable'],[summary.pendingDeliverables,'sin entregable']
+      ])if(count)warnings.push(count+' '+(count===1?'actividad':'actividades')+' '+label+'.');
+    }
     if(!String(d.contenido||'').trim() && !d.documentSections?.length && fam!=='ACT' && !(fam==='RGI' && type.id==='asistencia-induccion'))warnings.push('No hay contenido institucional registrado.');
     if(!families[fam].authoritative)warnings.push(`Falta la plantilla específica de ${families[fam].label}; esta vista es solo referencial.`);
     if(forExport)warnings.push('La exportación se identificará como maqueta/borrador; no constituye emisión ni aprobación oficial.');

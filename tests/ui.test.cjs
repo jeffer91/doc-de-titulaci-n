@@ -14,7 +14,7 @@ const document = {
 const saved = new Map();
 const window = {scrollY:157,scrollTo(x,y){this.scrollY=y}};
 const context=vm.createContext({window,document,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,val)=>saved.set(key,val)},setTimeout:()=>1,clearTimeout:()=>{},confirm:()=>true,Date,Math,console});
-for(const file of ['data.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js']) vm.runInContext(fs.readFileSync(path.join(ROOT,file),'utf8'),context,{filename:file});
+for(const file of ['data.js','plan-examen.model.js','plan-examen.figures.js','plan-examen.ui.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js']) vm.runInContext(fs.readFileSync(path.join(ROOT,file),'utf8'),context,{filename:file});
 const content=()=>document.getElementById('app-content').innerHTML;
 const htmlShell=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 assert.match(htmlShell,/src="assets\/utet-app-icon\.png"/);
@@ -54,6 +54,33 @@ click('rec-new');
 assert.match(content(),/Agregar registro por formulario/);
 click('rec-cancel');
 assert.match(content(),/Sin registros/);
+const edit=(dataset,value,event='input')=>callbacks.get('app-content:'+event)({type:event,target:{dataset,value}});
+for(const values of [
+  {actividad:'Inducción',etapa:'Inducción',ordenEtapa:'1',fechaInicio:'2026-06-01',fechaFin:'2026-06-01',sede:'Matriz'},
+  {actividad:'Examen',etapa:'Evaluación',ordenEtapa:'2',sede:'Sur'}
+]){
+  click('rec-new');
+  for(const [key,value] of Object.entries({
+    referencia:'Corte de prueba',fecha:'2026-05-15',asunto:type.nombre,carrera:'Carrera de prueba',...values
+  }))edit({recordField:key},value);
+  click('rec-save');
+}
+click('rec-collect');
+assert.match(content(),/Redactar con IA local/);
+assert.match(content(),/data-plan-figure="gantt"/);
+assert.match(content(),/1 actividad con fechas pendientes/);
+edit({planFigure:'complementaria'},'flujo','change');
+edit({planText:'conclusiones'},'Conclusión revisada por la coordinación.');
+click('save-doc');
+const savedPlan=JSON.parse(saved.get('utet-maqueta-documentos-v1'))[0];
+assert.equal(savedPlan.planExamen.figures.complementaria,'flujo');
+assert.equal(savedPlan.planExamen.template.version,'1.0');
+assert.equal(savedPlan.planExamen.text.conclusiones,'Conclusión revisada por la coordinación.');
+click('go-documents');
+click('edit-doc',savedPlan.id);
+assert.match(content(),/Conclusión revisada por la coordinación/);
+assert.match(content(),/data-plan-figure="flujo"/);
+click('rec-open',type.id);
 click('rec-back');
 assert.match(content(),/Borradores guardados/);
 click('rec-open','plagio-trabajo');

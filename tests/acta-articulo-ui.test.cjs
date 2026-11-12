@@ -21,7 +21,7 @@ const window={scrollY:0,scrollTo(x,y){this.scrollY=y;},utetDesktop:{
 const store=new Map();
 const ctx=vm.createContext({window,document,Date,Math,Promise,console,setTimeout:()=>1,clearTimeout:()=>{},
  localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},confirm:()=>true});
-for(const file of ['data.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js'])
+for(const file of ['data.js','plan-examen.model.js','plan-examen.figures.js','plan-examen.ui.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js'])
  vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),ctx,{filename:file});
 const click=(action,id='')=>callbacks.get('document:click')({target:{closest:()=>({dataset:{action,id}})}});
 const html=()=>document.getElementById('app-content').innerHTML;

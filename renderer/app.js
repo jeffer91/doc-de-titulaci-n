@@ -87,6 +87,7 @@
     `<div class="config-grid"><div class="config-card"><h3>Firebase · ${escape('utet-4387a')}</h3><p>Las fichas individuales pueden consultar matrícula y requisitos. Los documentos con emisión institucional usan el correlativo registrado en Firestore.</p><div class="kv"><span>Estado</span><strong>Consultas puntuales y emisión por módulo</strong></div><div class="kv"><span>Respaldo</span><strong>6 períodos / 11 requisitos</strong></div><div class="kv"><span>Escritura</span><strong>Folios de actas, similitud y cronograma de Artículo</strong></div></div><div class="config-card"><h3>Reglas de formato</h3><p>RGI, INF y ACT aplican el estándar maestro de portada.</p><div class="kv"><span>Papel</span><strong>A4 vertical · 21 × 29,7 cm</strong></div><div class="kv"><span>Márgenes de portada</span><strong>1,5 cm</strong></div><div class="kv"><span>Ancho de tablas</span><strong>18 cm · fijo</strong></div><div class="kv"><span>Fuente portada</span><strong>Arial</strong></div><div class="kv"><span>Firmas</span><strong>Solo primera hoja</strong></div><div class="kv"><span>Referencias</span><strong>Guía RGI/INF/ACT v1.1</strong></div></div><div class="config-card"><h3>Correspondencia institucional</h3><p>OFI, MEM y COM conservan la estructura de los modelos Word, con datos editables. Certificado CERT se reserva para una futura ampliación y no se suma a los 24 documentos.</p><div class="kv"><span>Oficio</span><strong>Número, destinatario, asunto y firma</strong></div><div class="kv"><span>Memorando</span><strong>PARA, DE, ASUNTO, FECHA</strong></div><div class="kv"><span>Comunicado</span><strong>Título, cuerpo, fecha y número</strong></div></div><div class="config-card"><h3>Control de plantillas</h3><p>La portada ACT es la de un acta de reunión. El acta de seguimiento reúne participantes, hallazgos y compromisos para revisión. Las actas AT (AA, TT y CX) usan la plantilla de tres hojas carta con numeración institucional; el plan de núcleo aún carece de modelo específico.</p><div class="kv"><span>Formatos disponibles</span><strong>RGI / INF / ACT / OFI / MEM / COM / AT</strong></div><div class="kv"><span>Actas AT</span><strong>Artículo, Trabajo y Complexivo</strong></div><div class="kv"><span>Plan de núcleo</span><strong>Pendiente de plantilla</strong></div><div class="kv"><span>PDF</span><strong>Exportación como borrador</strong></div><div class="kv"><span>DOCX / XLSX</span><strong>Fase posterior</strong></div></div><div class="config-card"><h3>Firmantes predeterminados</h3><p>Aplicables a RGI e INF. En actas ACT son variables.</p><div class="kv"><span>Elabora</span><strong>Mgs. Jefferson Villarreal</strong></div><div class="kv"><span>Revisa</span><strong>Ing. Martha Tomalá</strong></div><div class="kv"><span>Aprueba</span><strong>Dr. Alex León</strong></div></div><div class="config-card"><h3>Pruebas locales</h3><p>Elimina únicamente documentos y actividad de esta maqueta. No afecta a Firebase.</p>${button('reset-demo','Borrar borradores de prueba','','btn')}</div></div>`;
   const draftDefault = t => ({
     ...INST.defaultDraftFields(t),
+    ...(t.id==='plan-examen'?{planExamen:window.UTET_PLAN_EXAMEN.create([],period().label)}:{}),
     id:'demo_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),tipoId:t.id,periodId:state.periodId,estado:'Borrador',
     asunto:t.nombre,carrera:'',fecha:new Date().toLocaleDateString('en-CA'),
     contenido:'',observaciones:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
@@ -117,8 +118,8 @@
     const saved=state.draft,t=typeById(saved?.tipoId);if(!saved||!t)return '<div class="empty">No se encuentra el documento solicitado.</div>';
     const d=INST.normalize(saved,t),family=INST.familyFor(t),info=INST.families[family];
     const careers=DATA.periodos.find(p=>p.id===d.periodId)?.porCarrera||[];
-    return heading('Documentos / formato institucional',t.nombre,`${t.proceso} · ${t.codigo} · ${DATA.periodos.find(p=>p.id===d.periodId)?.label||''}`,(Array.isArray(d.documentSections)?button('rec-open','← Registros',`data-id="${escape(t.id)}"`):button('go-documents','← Volver al catálogo')))+
-    `<div class="two-col"><div class="form-card"><div class="eyebrow">DATOS DEL DOCUMENTO · <span class="inst-family-tag">${escape(info.label)}</span></div>${!info.authoritative?'<div class="inst-example-note">Solo hay referencia parcial del formato. No utilices esta vista como acta oficial ni como modelo definitivo del cuerpo del documento.</div>':''}<div class="inst-fields-grid">${fInput('asunto','Título o asunto',d.asunto,true)}${fInput('fecha','Fecha de elaboración / reunión',d.fecha,false,'type="date"')}<div class="field"><label for="f-carrera">Carrera</label><select class="select" id="f-carrera" data-field="carrera"><option value="">Todas / sin definir</option>${careers.map(c=>`<option value="${escape(c.nombre)}" ${d.carrera===c.nombre?'selected':''}>${escape(c.nombre)}</option>`).join('')}</select></div></div>${detailsFor(d,t)}<div class="inst-fields-group"><h3>Cuerpo y observaciones</h3>${fArea('contenido','Contenido editable',d.contenido,true,'Las tablas se preparan desde los registros del documento.')}${fArea('observaciones','Observaciones',d.observaciones)}</div><span class="tag-status ${statusClass(d.estado)}">${escape(d.estado)} · solo prueba</span><div class="inst-validation" id="institutional-validation">${validationHTML(d,t)}</div></div><div class="preview-card"><div class="inst-preview-toolbar"><span>VISTA PREVIA DE PÁGINAS A4</span><span>${escape(info.label)}</span></div><div class="inst-preview" id="print-preview">${previewHTML(d)}</div></div></div><div class="editor-footer"><small>Vista previa para revisión documental.</small>${button('save-doc','Guardar borrador')}${button('review-doc','Marcar en revisión')}${button('pdf-doc','↓ Exportar PDF de maqueta','','btn btn-primary')}</div>`;
+    return heading('Documentos / formato institucional',t.nombre,`${t.proceso} · ${t.codigo} · ${DATA.periodos.find(p=>p.id===d.periodId)?.label||''}`,((d.planExamen||Array.isArray(d.documentSections))?button('rec-open','← Registros',`data-id="${escape(t.id)}"`):button('go-documents','← Volver al catálogo')))+
+    `<div class="two-col"><div class="form-card"><div class="eyebrow">DATOS DEL DOCUMENTO · <span class="inst-family-tag">${escape(info.label)}</span></div>${!info.authoritative?'<div class="inst-example-note">Solo hay referencia parcial del formato. No utilices esta vista como acta oficial ni como modelo definitivo del cuerpo del documento.</div>':''}<div class="inst-fields-grid">${fInput('asunto','Título o asunto',d.asunto,true)}${fInput('fecha','Fecha de elaboración / reunión',d.fecha,false,'type="date"')}<div class="field"><label for="f-carrera">Carrera</label><select class="select" id="f-carrera" data-field="carrera"><option value="">Todas / sin definir</option>${careers.map(c=>`<option value="${escape(c.nombre)}" ${d.carrera===c.nombre?'selected':''}>${escape(c.nombre)}</option>`).join('')}</select></div></div>${detailsFor(d,t)}${planUI.render(d)}<div class="inst-fields-group"><h3>Cuerpo y observaciones</h3>${fArea('contenido',d.planExamen?'Información adicional':'Contenido editable',d.contenido,true,d.planExamen?'Agrega contexto para la redacción y el PDF.':'Las tablas se preparan desde los registros del documento.')}${fArea('observaciones','Observaciones',d.observaciones)}</div><span class="tag-status ${statusClass(d.estado)}">${escape(d.estado)} · solo prueba</span><div class="inst-validation" id="institutional-validation">${validationHTML(d,t)}</div></div><div class="preview-card"><div class="inst-preview-toolbar"><span>VISTA PREVIA DE PÁGINAS A4</span><span>${escape(info.label)}</span></div><div class="inst-preview" id="print-preview">${previewHTML(d)}</div></div></div><div class="editor-footer"><small>Vista previa para revisión documental.</small>${button('save-doc','Guardar borrador')}${button('review-doc','Marcar en revisión')}${button('pdf-doc','↓ Exportar PDF de maqueta','','btn btn-primary')}</div>`;
   };
   function render() {
     $('nav-main').innerHTML=navItems.map(([id,icon,title])=>`<button type="button" class="nav-button ${state.view===id||((state.view==='editor'||state.view==='records')&&id==='documentos')?'active':''}" data-nav="${id}" title="${escape(title)}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-text">${escape(title)}</span></button>`).join('');
@@ -144,6 +145,7 @@
     if(actaUI.handleAction(a,id))return;
     if(antiplagioUI.handleAction(a,id))return;
     if(cronUI.handleAction(a,id))return;
+    if(planUI.handleAction(a))return;
     if(recordsUI.handleAction(a,id))return;
     if(a==='go-documents'){state.proceso='todos';state.requisito='todos';go('documentos');}
     else if(a==='go-requirements')go('requisitos');
@@ -180,7 +182,7 @@
     const output=$('print-preview')?.innerHTML;
     if(!output){showToast('Vista previa no disponible');return;}
     if(!window.utetDesktop?.exportPDF){showToast('La exportación PDF requiere Electron.');return;}
-    const name='MAQUETA-'+t.proceso+'-'+d.fecha;
+    const name='MAQUETA-'+t.proceso+'-'+(d.planExamen?'Planificacion-Complexivo-'+d.periodId+'-':'')+d.fecha;
     try {
       const r=await window.utetDesktop.exportPDF({ suggestedName:name, html:output });
       if(!r?.canceled)showToast('PDF de maqueta exportado. No es un documento aprobado.');
@@ -198,6 +200,7 @@
   });
   document.addEventListener('click',handleClick);
   $('app-content').addEventListener('change',e=>{
+    if(planUI.input(e))return;
     cronUI.input(e);
     recordsUI.input(e);
     antiplagioUI.input(e);
@@ -207,6 +210,7 @@
     if(e.target.dataset.field&&state.draft){state.draft[e.target.dataset.field]=e.target.value;refreshPreview();}
   });
   $('app-content').addEventListener('input',e=>{
+    if(planUI.input(e))return;
     cronUI.input(e);
     recordsUI.input(e);
     antiplagioUI.input(e);
@@ -214,6 +218,7 @@
   });
   $('app-content').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='rec-search'){e.preventDefault();recordsUI.handleAction('rec-search');}if(e.key==='Enter'&&e.target.id==='doc-search'){e.preventDefault();state.search=e.target.value.trim();render();}if(e.key==='Enter'&&e.target.id==='career-search'){e.preventDefault();state.carreraSearch=e.target.value.trim();render();}});
   function refreshPreview(){const el=$('print-preview');if(el&&state.draft)el.innerHTML=previewHTML(state.draft);const v=$('institutional-validation');if(v&&state.draft)v.innerHTML=validationHTML(state.draft,typeById(state.draft.tipoId));}
+  const planUI=window.UTET_PLAN_EXAMEN_UI.create({state,render,refreshPreview});
   const recordsUI=window.UTET_RECORD_UI.create({data:DATA,records:window.UTET_RECORDS,state,period,getType:typeById,go,render,draftDefault,showToast,logAction});
   const antiplagioUI=window.UTET_ANTIPLAGIO.create({state,period,go,render,showToast});
   const actaUI=window.UTET_ACTA_ARTICULO.create({state,period,go,render,showToast});

@@ -10,6 +10,14 @@ Los otros 18 documentos admiten formulario y carga Excel. La vista previa genera
 
 Los formularios individuales pueden completar la ficha desde `matriculas` y `Estudiante`. Los informes de verificación también consultan `requisitos`. Los campos que no consten quedan pendientes o se capturan con su evidencia. Las solicitudes y planes de núcleo registran su referencia de SISACAD. El Informe Final registra el corte preparado en el módulo Inf de Requisitos y sus ocho apartados. Los registros de captura y los borradores se guardan en el perfil local.
 
+## PRO-56 · Planificación del Examen Complexivo
+
+En **Procesos → Planificación semestral → Planificación del Examen Complexivo → Datos**, registra actividades por formulario o Excel y elige **Preparar PDF**. La planificación incluye introducción, base legal, metodología y referencias reutilizables. El contexto del período, las conclusiones y las recomendaciones se generan a partir de las actividades cargadas y se pueden editar en la vista previa.
+
+La app dibuja el Gantt con las fechas completas, ofrece un flujo cuando existe un orden de etapas y ofrece un esquema cuando hay varias sedes. El campo opcional **Orden de la etapa** permite indicar la secuencia. Las actividades con fechas pendientes siguen en la tabla y se señalan en la revisión. Puedes seleccionar hasta dos figuras y editar sus pies. Al guardar el borrador se conserva una copia de los registros, los textos, la versión de la plantilla y la selección de figuras.
+
+**Redactar con IA local** utiliza un modelo de texto instalado en Ollama. Abre Ollama en el equipo y, si tienes varios modelos, escribe su nombre en el campo opcional de la vista previa. El borrador automático, los gráficos y el PDF están disponibles directamente en la app. [Ollama para Windows](https://docs.ollama.com/windows)
+
 ## Identidad visual UTET
 
 El icono propio de la app muestra **documento, sello y birrete** en azul marino y dorado; es distinto del logotipo institucional que se conserva en los PDF.
