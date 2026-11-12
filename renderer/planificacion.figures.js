@@ -1,7 +1,7 @@
 'use strict';
 
 (function (root) {
-  const model=root.UTET_PLAN_EXAMEN;
+  const model=root.UTET_PLANIFICACION;
   const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const width=720,ink='#15334f',muted='#4e6178',blue='#2a618f',gold='#a66618',border='#dce5ee';
   const clip=(text,length)=>text.length>length?text.slice(0,length-1)+'…':text;
@@ -88,5 +88,5 @@
       });
     });
   }
-  root.UTET_PLAN_EXAMEN_FIGURES=Object.freeze({render});
+  root.UTET_PLANIFICACION_FIGURES=Object.freeze({render});
 })(window);

@@ -44,8 +44,15 @@ window.UTET_RECORD_UI = Object.freeze({create: function createRecordsUI(ctx) {
   function renderPending(){
     if(!pending)return '';
     const items=pending.rows,err=items.filter(x=>x.status==='Error').length+pending.errors.length,repeat=items.filter(x=>x.status==='Duplicado').length;
-    const preview=items.slice(0,75).map(x=>'<tr><td>'+x.line+'</td><td>'+esc(x.data.referencia||'—')+'</td><td>'+esc(x.data.carrera||x.data.estudiante||'—')+'</td><td>'+esc(x.status)+' '+esc(x.problem||'')+'</td></tr>').join('');
-    return '<section class="records-import-preview"><div class="records-import-summary"><strong>Vista previa: '+esc(pending.fileName)+'</strong><span>'+items.filter(x=>x.status==='Nuevo').length+' nuevos</span><span>'+repeat+' duplicados</span><span>'+err+' errores</span></div>'+(pending.errors.length?'<p class="records-error records-form">'+pending.errors.slice(0,10).map(x=>'Fila '+x.line+': '+esc(x.message)).join(' · ')+'</p>':'')+'<div class="records-table-wrap"><table class="records-table"><thead><tr><th>Fila</th><th>Referencia</th><th>Carrera / estudiante</th><th>Validación</th></tr></thead><tbody>'+preview+'</tbody></table></div><div class="records-form-foot records-form"><label for="rec-duplicate">Duplicados:</label><select id="rec-duplicate" class="records-filter"><option value="skip">Omitir</option><option value="update">Actualizar existentes</option></select>'+btn('rec-cancel-import','Cancelar')+btn('rec-confirm-import','Confirmar carga','btn btn-primary')+'</div></section>';
+    const workPlan=selected==='plan-trabajo',source=x=>[x.sheet,x.line].filter(Boolean).join(' · ');
+    const preview=items.slice(0,75).map(x=>{
+      const description=workPlan?[x.data.actividad,x.data.carrera].filter(Boolean).join(' · '):x.data.carrera||x.data.estudiante;
+      const dates=workPlan?'<td>'+esc((x.data.fechaInicio||'Pendiente')+' – '+(x.data.fechaFin||'Pendiente'))+'</td>':'';
+      return '<tr><td>'+esc(source(x))+'</td><td>'+esc(x.data.referencia||'—')+'</td><td>'+esc(description||'—')+'</td>'+dates+'<td>'+esc(x.status)+' '+esc(x.problem||'')+'</td></tr>';
+    }).join('');
+    const errors=pending.errors.map(x=>esc(source(x))+' · '+esc(x.message));
+    const headers=workPlan?'<th>Actividad / carrera</th><th>Inicio y fin</th>':'<th>Carrera / estudiante</th>';
+    return '<section class="records-import-preview"><div class="records-import-summary"><strong>Vista previa: '+esc(pending.fileName)+'</strong><span>'+items.filter(x=>x.status==='Nuevo').length+' nuevos</span><span>'+repeat+' duplicados</span><span>'+err+' errores</span></div>'+(errors.length?'<p class="records-error records-form">'+errors.slice(0,10).join(' · ')+'</p>':'')+'<div class="records-table-wrap"><table class="records-table"><thead><tr><th>Fila</th><th>Referencia</th>'+headers+'<th>Validación</th></tr></thead><tbody>'+preview+'</tbody></table></div><div class="records-form-foot records-form"><label for="rec-duplicate">Duplicados:</label><select id="rec-duplicate" class="records-filter"><option value="skip">Omitir</option><option value="update">Actualizar existentes</option></select>'+btn('rec-cancel-import','Cancelar')+btn('rec-confirm-import','Confirmar carga','btn btn-primary')+'</div></section>';
   }
   function batches(list){
     const groups=new Map();
@@ -152,7 +159,7 @@ window.UTET_RECORD_UI = Object.freeze({create: function createRecordsUI(ctx) {
       const rows=(x.rows||[]).map(item=>{
         const data=records.normalize(selected,item.data),key=records.uniqueKey(selected,data),p=records.validate(selected,data);
         if(seen.has(key))p.push('Duplicado dentro del Excel.');seen.add(key);
-        return {line:item.line,data,key,status:p.length?'Error':known.has(key)?'Duplicado':'Nuevo',problem:p.join(' ')};
+        return {line:item.line,sheet:item.sheet,data,key,status:p.length?'Error':known.has(key)?'Duplicado':'Nuevo',problem:p.join(' ')};
       });
       pending={fileName:x.fileName,periodId:request.periodId,typeId:request.typeId,rows,errors:x.errors||[]};form=null;formSource=null;render();
     }catch(e){showToast('Error al leer Excel: '+e.message);}

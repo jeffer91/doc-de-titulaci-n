@@ -21,7 +21,7 @@ const fixture={
 
 async function run(){
  const context=vm.createContext({window:{}});
- for(const script of ['data.js','plan-examen.model.js','plan-examen.figures.js','records.js','institutional.js'])
+ for(const script of ['data.js','planificacion.model.js','planificacion.figures.js','records.js','institutional.js'])
   vm.runInContext(await fs.readFile(path.join(renderer,script),'utf8'),context,{filename:script});
  const {UTET_DATA:data,UTET_RECORDS:records,UTET_INSTITUTIONAL:institutional}=context.window;
  const period=data.periodos[0],types=data.procesos.flatMap(process=>process.documentos).filter(type=>!records.workflow(type.id).route);
@@ -36,7 +36,10 @@ async function run(){
   for(const type of types){
    const rows=type.id==='plan-examen'?Array.from({length:31},(_,index)=>({
     ...fixture,actividad:fixture.actividad+' '+(index+1),sede:index%2?'Sur':'Matriz'
-   })):[fixture];
+   })):type.id==='plan-trabajo'?[
+    {...fixture,actividad:'Tutoría y revisión del proyecto',tutoria:'Tutoría metodológica',sede:'Matriz'},
+    {...fixture,actividad:'Entrega del Trabajo de Titulación',sede:'Sur'}
+   ]:[fixture];
    const draft=records.toDocument(rows,type,period.id,institutional.defaultDraftFields(type));
    const markup=institutional.render(draft,type,period.label)
     .replaceAll('src="assets/logo-itsqmet.png"','src="data:image/png;base64,'+logo.toString('base64')+'"');
@@ -44,6 +47,11 @@ async function run(){
     assert.equal((markup.match(/data-plan-figure="gantt"/g)||[]).length,4);
     assert.match(markup,/data-plan-figure="sedes"/);
     assert.match(markup,/Recomendaciones/);
+   }
+   if(type.id==='plan-trabajo'){
+    assert.match(markup,/data-plan-figure="gantt"/);
+    assert.match(markup,/UTET-PRO-96 y UTET-PRO-164/);
+    assert.match(markup,/Tutoría metodológica/);
    }
    const html='<!doctype html><html lang="es"><head><meta charset="utf-8"><style>@page{size:A4;margin:0}html,body{margin:0}*{box-sizing:border-box}'+css+'</style></head><body>'+markup+'</body></html>';
    await fs.writeFile(input,html);

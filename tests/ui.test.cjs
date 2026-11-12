@@ -14,7 +14,7 @@ const document = {
 const saved = new Map();
 const window = {scrollY:157,scrollTo(x,y){this.scrollY=y}};
 const context=vm.createContext({window,document,localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,val)=>saved.set(key,val)},setTimeout:()=>1,clearTimeout:()=>{},confirm:()=>true,Date,Math,console});
-for(const file of ['data.js','plan-examen.model.js','plan-examen.figures.js','plan-examen.ui.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js']) vm.runInContext(fs.readFileSync(path.join(ROOT,file),'utf8'),context,{filename:file});
+for(const file of ['data.js','planificacion.model.js','planificacion.figures.js','planificacion.ui.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js']) vm.runInContext(fs.readFileSync(path.join(ROOT,file),'utf8'),context,{filename:file});
 const content=()=>document.getElementById('app-content').innerHTML;
 const htmlShell=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 assert.match(htmlShell,/src="assets\/utet-app-icon\.png"/);
@@ -73,9 +73,9 @@ edit({planFigure:'complementaria'},'flujo','change');
 edit({planText:'conclusiones'},'Conclusión revisada por la coordinación.');
 click('save-doc');
 const savedPlan=JSON.parse(saved.get('utet-maqueta-documentos-v1'))[0];
-assert.equal(savedPlan.planExamen.figures.complementaria,'flujo');
-assert.equal(savedPlan.planExamen.template.version,'1.0');
-assert.equal(savedPlan.planExamen.text.conclusiones,'Conclusión revisada por la coordinación.');
+assert.equal(savedPlan.planificacion.figures.complementaria,'flujo');
+assert.equal(savedPlan.planificacion.template.version,'1.0');
+assert.equal(savedPlan.planificacion.text.conclusiones,'Conclusión revisada por la coordinación.');
 click('go-documents');
 click('edit-doc',savedPlan.id);
 assert.match(content(),/Conclusión revisada por la coordinación/);
@@ -102,4 +102,43 @@ assert.match(content(),/Cronograma manual/);
 assert.match(content(),/Añadir actividad/);
 click('cr-back');
 assert.match(content(),/Borradores guardados/);
-console.log('OK UI: diseño compacto, numeración 01-09 y códigos UTET-PRO, 6 períodos, 24 documentos y editor.');
+(async()=>{
+  const periodId='2026-04__2026-09';
+  callbacks.get('period-select:change')({target:{value:periodId}});
+  window.utetDesktop={
+    async importExcel(spec){
+      assert.equal(spec.typeId,'plan-trabajo');
+      assert.equal(spec.periodId,periodId);
+      return {fileName:'Cronograma.xlsx',rows:[{line:3,sheet:'Trabajo de Titulación',data:{
+        referencia:'Cronograma',asunto:spec.title,fecha:'2026-04-01',
+        actividad:'Revisión del proyecto',fechaInicio:'2026-04-06',fechaFin:'2026-04-08',tutoria:'Tutoría metodológica'
+      }}]};
+    },
+    async redactPlanificacion(plan){
+      assert.equal(plan.tipoId,'plan-trabajo');
+      assert.equal(plan.rows[0].tutoria,'Tutoría metodológica');
+      return {text:{
+        contexto:'Contexto revisado de Trabajo de Titulación.',
+        conclusiones:'Se programó la revisión del proyecto.',
+        recomendaciones:'Confirmar la tutoría metodológica.'
+      },figures:{principal:'gantt',complementaria:''},captions:{},model:'modelo-local'};
+    }
+  };
+  const tick=()=>new Promise(resolve=>setImmediate(resolve));
+  click('rec-open','plan-trabajo');
+  click('rec-import');
+  await tick();
+  assert.match(content(),/Trabajo de Titulación · 3/);
+  assert.match(content(),/2026-04-06 – 2026-04-08/);
+  click('rec-confirm-import');
+  click('rec-collect');
+  assert.match(content(),/data-plan-figure="gantt"/);
+  click('plan-ai');
+  await tick();
+  assert.match(content(),/Contexto revisado de Trabajo de Titulación/);
+  click('save-doc');
+  const work=JSON.parse(saved.get('utet-maqueta-documentos-v1')).find(doc=>doc.tipoId==='plan-trabajo');
+  assert.equal(work.periodId,periodId);
+  assert.equal(work.planificacion.text.recomendaciones,'Confirmar la tutoría metodológica.');
+  console.log('OK UI: catálogo, navegación, carga Excel y redacción asistida de Trabajo de Titulación.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

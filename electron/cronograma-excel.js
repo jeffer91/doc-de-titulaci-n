@@ -114,4 +114,4 @@ async function importFiles(event){
  if(result.length>60)throw Error('Se detectaron demasiadas hojas. Máximo 60 por lote.');
  return {canceled:false,sheets:result,files:chosen.filePaths.length};
 }
-module.exports={parseBuffer,parseSheet,excelDate,periodFrom,classify,importFiles};
+module.exports={parseBuffer,parseSheet,excelDate,excelCellValue:plain,periodFrom,classify,importFiles};

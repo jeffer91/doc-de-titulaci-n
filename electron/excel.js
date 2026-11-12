@@ -2,6 +2,8 @@
 const ExcelJS = require('exceljs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const {readSchedule}=require('./plan-trabajo-excel.js');
+const {periodKey}=require('../renderer/cronograma.model.js');
 const MAX_ROWS=2500;
 const MAX_FILE=10*1024*1024;
 const safe = v=>String(v??'').trim().slice(0,5000);
@@ -82,25 +84,35 @@ async function downloadTemplate(event,spec){
 async function importWorkbook(event,spec){
   validSpec(spec);
   const owner=event.sender.getOwnerBrowserWindow();
-  const response=await require('electron').dialog.showOpenDialog(owner,{title:'Cargar plantilla Excel',filters:[{name:'Excel',extensions:['xlsx']}],properties:['openFile']});
+  const title=spec.typeId==='plan-trabajo'?'Cargar cronograma o plantilla Excel':'Cargar plantilla Excel';
+  const response=await require('electron').dialog.showOpenDialog(owner,{title,filters:[{name:'Excel',extensions:['xlsx']}],properties:['openFile']});
   if(response.canceled||!response.filePaths?.[0])return {canceled:true};
   const target=response.filePaths[0];
   const stat=await fs.stat(target);
   if(stat.size>MAX_FILE)throw new Error('El Excel supera el límite de 10 MB.');
   const workbook=new ExcelJS.Workbook();
   await workbook.xlsx.load(await fs.readFile(target));
-  return {canceled:false,fileName:path.basename(target),...readWorkbook(workbook,spec)};
+  const fileName=path.basename(target);
+  return {canceled:false,fileName,...readWorkbook(workbook,spec,fileName)};
 }
-function readWorkbook(workbook,spec){
+function readWorkbook(workbook,spec,fileName){
   validSpec(spec);
   const help=workbook.getWorksheet('Instrucciones'),metadata=new Map();
   help?.eachRow(row=>metadata.set(safe(row.getCell(1).value),safe(row.getCell(2).value)));
   if(metadata.get('Tipo')&&metadata.get('Tipo')!==spec.typeId)throw Error('El Excel corresponde a otro tipo documental.');
   const workbookPeriod=metadata.get('ID de período');
   const label=metadata.get('Período');
-  if((workbookPeriod&&workbookPeriod!==spec.periodId)||(!workbookPeriod&&label&&label!==spec.periodLabel))
+  const workPlan=spec.typeId==='plan-trabajo';
+  const matchingLabel=label===spec.periodLabel||(workPlan&&periodKey(label)&&periodKey(label)===periodKey(spec.periodId));
+  if((workbookPeriod&&workbookPeriod!==spec.periodId)||(!workbookPeriod&&label&&!matchingLabel))
     throw Error('El período del Excel no coincide con el período seleccionado.');
   const sheet=workbook.getWorksheet('Datos');
+  if(workPlan&&!metadata.get('Tipo')){
+    const firstRow=new Set();
+    sheet?.getRow(1).eachCell(cell=>firstRow.add(safe(cell.value)));
+    if(!['Referencia / convocatoria','Fecha de emisión (AAAA-MM-DD)','Asunto / título'].every(label=>firstRow.has(label)))
+      return readSchedule(workbook,spec,fileName,MAX_ROWS);
+  }
   if(!sheet)throw new Error('No se encontró la hoja Datos de la plantilla.');
   const byLabel=new Map(spec.columns.map(col=>[col.label,col])),positions=new Map(),seen=new Set();
   sheet.getRow(1).eachCell((cell,index)=>{

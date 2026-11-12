@@ -18,6 +18,12 @@ La app dibuja el Gantt con las fechas completas, ofrece un flujo cuando existe u
 
 **Redactar con IA local** utiliza un modelo de texto instalado en Ollama. Abre Ollama en el equipo y, si tienes varios modelos, escribe su nombre en el campo opcional de la vista previa. El borrador automático, los gráficos y el PDF están disponibles directamente en la app. [Ollama para Windows](https://docs.ollama.com/windows)
 
+## PRO-56 · Planificación del Trabajo de Titulación
+
+Selecciona el período y abre **Planificación semestral → Planificación del Trabajo de Titulación → Datos**. Puedes usar el formulario, la plantilla institucional o cargar el cronograma Excel con **Actividad** y columnas de fecha. La vista de importación muestra la hoja, la actividad y sus fechas antes de guardar. Las fechas pendientes permanecen en el cronograma y se identifican en el análisis.
+
+**Preparar PDF** incluye la introducción, base legal, metodología y referencias del Trabajo de Titulación. Usa el cronograma para generar el contexto, las conclusiones y las recomendaciones, con campos para etapas de investigación, tutorías, revisiones y entregables. Conserva el Gantt y las demás figuras que admitan los datos. Puedes editar la redacción y usar opcionalmente **Redactar con IA local** en la vista previa.
+
 ## Identidad visual UTET
 
 El icono propio de la app muestra **documento, sello y birrete** en azul marino y dorado; es distinto del logotipo institucional que se conserva en los PDF.

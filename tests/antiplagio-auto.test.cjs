@@ -14,7 +14,7 @@ const window={scrollY:0,scrollTo(x,y){this.scrollY=y;},utetDesktop:{
 }};
 const ctx=vm.createContext({window,document,Date,Math,Promise,console,
  localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},setTimeout:()=>1,clearTimeout:()=>{}});
-for(const name of ['data.js','plan-examen.model.js','plan-examen.figures.js','plan-examen.ui.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js'])
+for(const name of ['data.js','planificacion.model.js','planificacion.figures.js','planificacion.ui.js','institutional.js','records.js','records-ui.js','antiplagio.model.js','antiplagio.js','acta-titulacion.modalidades.js','acta-articulo.model.js','acta-articulo.js','cronograma.model.js','cronograma.js','app.js'])
  vm.runInContext(fs.readFileSync(path.join(root,name),'utf8'),ctx,{filename:name});
 const display=()=>document.getElementById('app-content').innerHTML;
 const click=(action,id='')=>listeners.get('document:click')({target:{closest:()=>({dataset:{action,id}})}});

@@ -37,10 +37,13 @@
     F('inicioDefensa','Inicio defensa (HH:MM)',false,'time'),
     F('finDefensa','Fin defensa (HH:MM)',false,'time')
   ];
+  const planningDates=[{...start,required:false},{...end,required:false}];
+  const stageOrder=F('ordenEtapa','Orden de la etapa',false,'number');
   const definitions = {
-    'plan-examen':[career,{...start,required:false},{...end,required:false},responsible,notes,group,
-      F('actividad','Actividad'),F('etapa','Etapa'),F('entregable','Entregable'),site,evidence,F('ordenEtapa','Orden de la etapa',false,'number')],
-    'plan-trabajo':[career,start,end,responsible,notes,group,F('actividad','Actividad'),F('etapa','Etapa'),F('entregable','Entregable'),F('tutoria','Tutoría o revisión'),evidence],
+    'plan-examen':[career,...planningDates,responsible,notes,group,
+      F('actividad','Actividad'),F('etapa','Etapa'),F('entregable','Entregable'),site,evidence,stageOrder],
+    'plan-trabajo':[{...career,required:false},...planningDates,responsible,notes,group,
+      F('actividad','Actividad'),F('etapa','Etapa'),F('entregable','Entregable'),F('tutoria','Tutoría o revisión'),evidence,site,stageOrder],
     'plan-articulo':[career,start,end,responsible,notes,group,F('actividad','Actividad'),F('etapa','Etapa'),F('entregable','Entregable'),F('hito','Hito metodológico'),evidence],
     'informe-final':[modality,F('totalEstudiantes','Total estudiantes',false,'number'),reportFields[3],notes,
       F('fuenteInforme','Referencia del informe o corte de Requisitos'),...reportFields.filter(f=>f.key!=='resultados')],
@@ -94,8 +97,9 @@
   const workflows = Object.freeze({
     'plan-examen':profile('Una planificación por período y referencia','Planificación UTET, cronograma y asignaciones confirmadas','PDF con programación, gráficos y análisis del período',
       {table:'Planificación del Examen Complexivo',columns:[cohort,column('Actividad','actividad','etapa','ordenEtapa'),dates,'responsable','entregable',destination,support]}),
-    'plan-trabajo':profile('Una planificación por período y referencia','Planificación UTET, tutorías y entregables coordinados con UII','Registro con actividades, tutorías, entregables y responsables',
-      {table:'Planificación de Trabajo de Titulación',columns:[cohort,activity,dates,column('Tutoría y entregable','tutoria','entregable'),'responsable',support]}),
+    'plan-trabajo':profile('Una planificación por período y referencia','Cronograma de Trabajo de Titulación, tutorías y entregables coordinados con UII','PDF con cronograma, gráficos y análisis del período',
+      {table:'Planificación del Trabajo de Titulación',columns:[cohort,column('Actividad','actividad','etapa','ordenEtapa'),dates,
+        column('Tutoría y entregable','tutoria','entregable'),'responsable',destination,support]}),
     'plan-articulo':profile('Una planificación por período y referencia','Planificación UTET y cronograma de Artículo Académico','Registro con hitos metodológicos, entregas y revisiones',
       {table:'Planificación de Artículo Académico',columns:[cohort,column('Actividad e hito','actividad','etapa','hito'),dates,'entregable','responsable',support]}),
     'informe-final':profile('Un informe por período y corte','Requisitos → Inf y evidencias de ejecución del período','Informe con ocho capítulos y referencia al corte utilizado',
@@ -177,7 +181,7 @@
     }
     if(id.startsWith('plagio-') && row.porcentaje && Number(row.porcentaje.replace(',','.'))>100) errors.push('Porcentaje de similitud: máximo 100.');
     if(row.fechaInicio&&row.fechaFin&&row.fechaFin<row.fechaInicio) errors.push('La fecha final precede a la fecha inicial.');
-    if(id==='plan-examen'&&row.ordenEtapa&&!/^[1-9]\d{0,2}$/.test(row.ordenEtapa)) errors.push('El orden de la etapa debe ser un entero de 1 a 999.');
+    if(row.ordenEtapa&&!/^[1-9]\d{0,2}$/.test(row.ordenEtapa)) errors.push('El orden de la etapa debe ser un entero de 1 a 999.');
     if(row.fechaReunion&&row.fechaCompromiso&&row.fechaCompromiso<row.fechaReunion) errors.push('El compromiso vence antes de la reunión.');
     if(row.inicioDefensa&&row.finDefensa&&row.finDefensa<row.inicioDefensa) errors.push('La defensa termina antes de su hora de inicio.');
     const counts=['totalEstudiantes','cumplen','pendientes','convocados','asistentes'];
@@ -285,9 +289,9 @@
       documentSections:sections,
       createdAt:now,updatedAt:now,estado:'Borrador'
     };
-    if(type.id==='plan-examen'){
+    if(window.UTET_PLANIFICACION?.supports(type.id)){
       const periodLabel=window.UTET_DATA?.periodos.find(period=>period.id===periodId)?.label||periodId;
-      data.planExamen=window.UTET_PLAN_EXAMEN.create(rows,periodLabel);
+      data.planificacion=window.UTET_PLANIFICACION.create(rows,periodLabel,type.id);
     }
     if(spec.recipient){
       data.destinatario=spec.recipient;

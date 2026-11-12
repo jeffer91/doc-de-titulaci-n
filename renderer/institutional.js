@@ -129,10 +129,10 @@
     if(page)blocks.push(page);
     return blocks.length?blocks:['<p class="inst-pending">Sin datos documentales registrados.</p>'];
   }
-  function planBlocks(d){
-    const plan=d.planExamen;
-    const summary=window.UTET_PLAN_EXAMEN.summarize(plan.rows);
-    const figures=window.UTET_PLAN_EXAMEN_FIGURES.render(plan,summary);
+  const planFor=(d,type)=>window.UTET_PLANIFICACION?.supports(type.id)?window.UTET_PLANIFICACION.fromDraft(d):null;
+  function planBlocks(d,plan){
+    const summary=window.UTET_PLANIFICACION.summarize(plan.rows);
+    const figures=window.UTET_PLANIFICACION_FIGURES.render(plan,summary);
     const sections=[
       {title:'Introducción',text:plan.template.introduccion},
       {title:'Base legal',text:plan.template.baseLegal},
@@ -150,7 +150,8 @@
   }
   function contentBlocks(d,type) {
     const fam=familyFor(type),result=[];
-    if(type.id==='plan-examen'&&d.planExamen)return planBlocks(d);
+    const plan=planFor(d,type);
+    if(plan)return planBlocks(d,plan);
     if(fam==='RGI' && type.id==='asistencia-induccion') {
       const r=splitRows(d.asistentes);
       const pieces=[];for(let i=0;i<r.length;i+=22)pieces.push(r.slice(i,i+22));
@@ -170,7 +171,7 @@
   }
   function contentPage(body,d,type,num,total) {
     const fam=familyFor(type);
-    const numbered=['INF','ACT'].includes(fam)||type.id==='plan-examen'&&d.planExamen;
+    const numbered=['INF','ACT'].includes(fam)||planFor(d,type);
     return `<section class="inst-page inst-body-page" data-family="${fam}"><div class="inst-cont-header"><span>${E(d.unidad)}</span><span>${E(type.proceso)} · ${E(shownCode(d,type))}</span>${numbered?`<span>${pagination(num,total)}</span>`:''}</div><div class="inst-body-main">${body}</div><div class="inst-page-foot">Documento de maqueta · ${E(d.periodoLabel||'')} · No es una emisión oficial</div>${seal()}</section>`;
   }
   function structuredDoc(d,type) {
@@ -228,8 +229,9 @@
     }
     if(fam==='ACT' && type.id==='acta-reunion')for(const [key,label] of [['numeroActa','número de acta'],['lugar','lugar'],['horaInicio','hora de inicio'],['horaFin','hora de fin']])needed(key,label);
     if(fam==='RGI'&&type.id==='asistencia-induccion'&&!lines(d.asistentes).length)warnings.push('Todavía no se han registrado asistentes verificados.');
-    if(type.id==='plan-examen'&&d.planExamen){
-      const summary=window.UTET_PLAN_EXAMEN.summarize(d.planExamen.rows);
+    const plan=planFor(d,type);
+    if(plan){
+      const summary=window.UTET_PLANIFICACION.summarize(plan.rows);
       for(const [count,label] of [
         [summary.pendingActivities,'sin descripción'],[summary.pendingDates,'con fechas pendientes'],
         [summary.pendingResponsible,'sin responsable'],[summary.pendingDeliverables,'sin entregable']

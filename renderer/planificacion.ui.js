@@ -1,10 +1,14 @@
 'use strict';
 
-window.UTET_PLAN_EXAMEN_UI=Object.freeze({create({state,render,refreshPreview}){
-  const Plan=window.UTET_PLAN_EXAMEN;
+window.UTET_PLANIFICACION_UI=Object.freeze({create({state,render,refreshPreview}){
+  const Plan=window.UTET_PLANIFICACION;
   const labels={gantt:'Gantt',flujo:'Flujo de etapas',sedes:'Esquema de sedes'};
   const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let request=null,notice=null;
+  function setPlan(draft,plan){
+    draft.planificacion=plan;
+    delete draft.planExamen;
+  }
 
   function renderHere(){
     const top=window.scrollY;
@@ -13,7 +17,7 @@ window.UTET_PLAN_EXAMEN_UI=Object.freeze({create({state,render,refreshPreview}){
   }
 
   function section(draft){
-    const plan=draft.planExamen;
+    const plan=Plan.fromDraft(draft);
     if(!plan)return '';
     const summary=Plan.summarize(plan.rows),options=Plan.available(summary);
     const chosen=[...new Set(Object.values(plan.figures))].filter(type=>options.includes(type));
@@ -42,49 +46,49 @@ window.UTET_PLAN_EXAMEN_UI=Object.freeze({create({state,render,refreshPreview}){
   }
 
   function input(event){
-    const draft=state.draft,plan=draft?.planExamen;
+    const draft=state.draft,plan=Plan.fromDraft(draft);
     if(!plan||state.view!=='editor')return false;
     const target=event.target,{planText,planCaption,planFigure}=target.dataset||{};
     if(planText&&Object.hasOwn(Plan.textLabels,planText)){
-      draft.planExamen={...plan,text:{...plan.text,[planText]:target.value.slice(0,1800)}};
+      setPlan(draft,{...plan,text:{...plan.text,[planText]:target.value.slice(0,1800)}});
       refreshPreview();
     }else if(planCaption&&Object.hasOwn(Plan.figureLabels,planCaption)){
-      draft.planExamen={...plan,captions:{...plan.captions,[planCaption]:target.value.slice(0,500)}};
+      setPlan(draft,{...plan,captions:{...plan.captions,[planCaption]:target.value.slice(0,500)}});
       refreshPreview();
     }else if(target.id==='plan-local-model'){
-      draft.planExamen={...plan,preferredModel:target.value.slice(0,120)};
+      setPlan(draft,{...plan,preferredModel:target.value.slice(0,120)});
     }else if(planFigure&&['principal','complementaria'].includes(planFigure)){
       if(event.type==='input')return true;
       const options=Plan.available(Plan.summarize(plan.rows)),value=options.includes(target.value)?target.value:'';
       const other=planFigure==='principal'?'complementaria':'principal';
       const figures={...plan.figures,[planFigure]:value};
       if(value&&figures[other]===value)figures[other]='';
-      draft.planExamen={...plan,figures};
+      setPlan(draft,{...plan,figures});
       renderHere();
     }else return false;
     return true;
   }
 
   async function redact(draft){
-    if(request||!draft.planExamen.rows.length)return;
-    const plan=draft.planExamen;
+    const plan=Plan.fromDraft(draft);
+    if(request||!plan?.rows.length)return;
     const {contenido,observaciones}=draft;
     const isCurrent=()=>state.view==='editor'&&state.draft===draft;
     request={draft};
     notice=null;
     renderHere();
     try{
-      if(!window.utetDesktop?.redactPlanExamen)throw Error('Abre el documento en la aplicación de escritorio para usar la IA local.');
-      const reply=await window.utetDesktop.redactPlanExamen({
-        rows:plan.rows,periodo:plan.periodo,modelo:plan.preferredModel,
+      if(!window.utetDesktop?.redactPlanificacion)throw Error('Abre el documento en la aplicación de escritorio para usar la IA local.');
+      const reply=await window.utetDesktop.redactPlanificacion({
+        tipoId:draft.tipoId,rows:plan.rows,periodo:plan.periodo,modelo:plan.preferredModel,
         observaciones:[contenido,observaciones].filter(Boolean).map(text=>text.slice(0,440)).join('\n')
       });
       if(!isCurrent())return;
-      if(draft.planExamen!==plan||draft.contenido!==contenido||draft.observaciones!==observaciones){
+      if(Plan.fromDraft(draft)!==plan||draft.contenido!==contenido||draft.observaciones!==observaciones){
         notice={id:draft.id,text:'El borrador cambió durante la redacción. Puedes solicitarla de nuevo.'};
         return;
       }
-      draft.planExamen={...plan,...reply,captions:{...plan.captions,...reply.captions}};
+      setPlan(draft,{...plan,...reply,captions:{...plan.captions,...reply.captions}});
       notice={id:draft.id,text:'Textos y figuras sugeridos. Revísalos en la vista previa.'};
     }catch(error){
       if(isCurrent())notice={id:draft.id,error:true,text:String(error.message||error).replace(/^Error invoking remote method '[^']+': Error: /,'')};
@@ -95,12 +99,12 @@ window.UTET_PLAN_EXAMEN_UI=Object.freeze({create({state,render,refreshPreview}){
   }
 
   function handleAction(action){
-    const draft=state.draft,plan=draft?.planExamen;
+    const draft=state.draft,plan=Plan.fromDraft(draft);
     if(state.view!=='editor'||!plan)return false;
     if(action==='plan-ai')redact(draft);
     else if(action==='plan-reset'){
-      const automatic=Plan.create(plan.rows,plan.periodo);
-      draft.planExamen={...plan,text:automatic.text,model:''};
+      const automatic=Plan.create(plan.rows,plan.periodo,draft.tipoId);
+      setPlan(draft,{...plan,text:automatic.text,model:''});
       notice=null;
       renderHere();
     }else return false;

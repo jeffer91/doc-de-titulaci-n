@@ -1,13 +1,30 @@
 'use strict';
 
 (function (root) {
-  const template = Object.freeze({
+  const examTemplate = Object.freeze({
     version: '1.0',
     introduccion: 'La Unidad de Titulación y Eficiencia Terminal organiza la Planificación del Examen Complexivo para orientar la preparación, la evaluación y el seguimiento de esta modalidad. El documento reúne las actividades previstas, sus fechas, los responsables y los entregables de las carreras y grupos que participan en el período académico.',
     baseLegal: 'La planificación toma como marco el Reglamento de Régimen Académico del Consejo de Educación Superior, en su texto aplicable al período. En el ámbito institucional, se articula con el Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal, en particular con la planificación semestral, los seminarios complexivos y la ejecución del Examen Complexivo.',
     metodologia: 'Se parte del calendario académico y de la información coordinada con las carreras. Las actividades se organizan por etapa, carrera o grupo, con fechas previstas, responsables, entregables y evidencias de respaldo. La UTET consolida la programación, revisa la coherencia de los datos y remite la planificación a las instancias correspondientes para su validación.',
     referencias: 'Consejo de Educación Superior. Reglamento de Régimen Académico. Resolución RPC-SE-08-No.023-2022 y reformas aplicables al período.\nInstituto Superior Tecnológico Quito Metropolitano. Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal, versión 2.0. Procesos UTET-PRO-56, UTET-PRO-88 y UTET-PRO-93.'
   });
+  const workTemplate = Object.freeze({
+    version: '1.0',
+    introduccion: 'La Unidad de Titulación y Eficiencia Terminal organiza el Trabajo de Titulación como un proceso de investigación que culmina con la presentación y evaluación de un documento escrito. Esta planificación orienta el desarrollo del trabajo y reúne las etapas, tutorías, revisiones, entregables y actividades de evaluación que correspondan al período académico.',
+    baseLegal: 'La planificación toma como marco el Reglamento de Régimen Académico del Consejo de Educación Superior, en su texto aplicable al período. En el ámbito institucional, se articula con el Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal en lo relativo a la planificación semestral, el ingreso al Trabajo de Titulación y la ejecución de esta modalidad.',
+    metodologia: 'La programación se construye a partir del calendario académico y de la coordinación con las carreras y la Unidad de Investigación e Innovación. Las actividades de formulación, desarrollo, tutoría, revisión, entrega y defensa se registran según el cronograma del período. La UTET revisa las fechas, los responsables y los entregables previstos para facilitar el seguimiento y la validación de la planificación.',
+    referencias: 'Consejo de Educación Superior. Reglamento de Régimen Académico. Resolución RPC-SE-08-No.023-2022 y reformas aplicables al período.\nInstituto Superior Tecnológico Quito Metropolitano. Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal, versión 2.0. Procesos UTET-PRO-56, UTET-PRO-96 y UTET-PRO-164.'
+  });
+  const types=Object.freeze({
+    'plan-examen':{nombre:'Planificación del Examen Complexivo',template:examTemplate},
+    'plan-trabajo':{nombre:'Planificación del Trabajo de Titulación',template:workTemplate}
+  });
+  const supports=id=>Object.hasOwn(types,id);
+  function typeFor(id) {
+    if(!supports(id))throw Error('El documento no tiene un formato de planificación disponible.');
+    return types[id];
+  }
+  const fromDraft=draft=>draft?.planificacion||draft?.planExamen||null;
   const textLabels = Object.freeze({
     contexto: 'Contexto del período',
     conclusiones: 'Conclusiones',
@@ -40,7 +57,7 @@
     return rawRows.map(row=>({
       actividad:clean(row?.actividad),etapa:clean(row?.etapa),carrera:clean(row?.carrera),grupo:clean(row?.grupo),
       sede:clean(row?.sede),fechaInicio:clean(row?.fechaInicio,24),fechaFin:clean(row?.fechaFin,24),
-      ordenEtapa:clean(row?.ordenEtapa,12),
+      ordenEtapa:clean(row?.ordenEtapa,12),tutoria:clean(row?.tutoria),entregable:clean(row?.entregable),
       tieneResponsable:typeof row?.tieneResponsable==='boolean'?row.tieneResponsable:Boolean(clean(row?.responsable)),
       tieneEntregable:typeof row?.tieneEntregable==='boolean'?row.tieneEntregable:Boolean(clean(row?.entregable))
     }));
@@ -112,7 +129,7 @@
     ];
   }
 
-  function compose(periodo, summary, rows) {
+  function compose(periodo, summary, rows, tipoId) {
     const {total,careers,phases,start,end,pendingDates,pendingResponsible,pendingDeliverables,pendingActivities}=summary;
     if(!total)return {
       contexto:'Las actividades del período se incorporan desde los registros de planificación.',
@@ -139,11 +156,16 @@
       pendingResponsible&&'Completar las asignaciones de responsables con las coordinaciones de carrera.',
       pendingDeliverables&&'Registrar los entregables pendientes para facilitar el seguimiento de las actividades.'
     ].filter(Boolean);
+    const trabajo=tipoId==='plan-trabajo';
+    const tutorias=trabajo?rows.filter(row=>row.tutoria).length:0;
+    const tutorText=tutorias?' La tutoría o revisión consta en '+counted(tutorias,'actividad','actividades')+'.':'';
+    const followUp=trabajo?'Confirmar con las coordinaciones de carrera y la Unidad de Investigación e Innovación las tutorías y los plazos de revisión de los entregables antes de socializar el cronograma.':
+      'Validar la programación con las coordinaciones de carrera y confirmar la disponibilidad de los espacios antes de socializar el cronograma.';
     return {
-      contexto:'La planificación del período '+periodo+' reúne '+counted(total,'actividad programada','actividades programadas')+careerText+'.'+phaseText+dateText,
+      contexto:'La planificación '+(trabajo?'del Trabajo de Titulación para el período ':'del período ')+periodo+' reúne '+counted(total,'actividad programada','actividades programadas')+careerText+'.'+phaseText+dateText+tutorText,
       conclusiones:pendiente.length?'La revisión de los registros de planificación identifica '+list(pendiente)+'.':
         'Las actividades registradas cuentan con fechas, responsables y entregables consignados para el seguimiento del período.',
-      recomendaciones:recommendations.join('\n')||'Validar la programación con las coordinaciones de carrera y confirmar la disponibilidad de los espacios antes de socializar el cronograma.'
+      recomendaciones:recommendations.join('\n')||followUp
     };
   }
 
@@ -154,12 +176,12 @@
     return 'La figura muestra la distribución de las actividades registradas en '+counted(summary.sites.length,'sede','sedes')+'.';
   }
 
-  function create(rawRows, periodLabel) {
+  function create(rawRows, periodLabel, tipoId='plan-examen') {
     const periodo=clean(periodLabel,150)||'seleccionado',rows=normalizeRows(rawRows),summary=summarize(rows);
     const options=available(summary),primary=options[0]||'';
     return {
-      template:{...template},periodo,rows,
-      text:compose(periodo,summary,rows),
+      tipoId,template:{...typeFor(tipoId).template},periodo,rows,
+      text:compose(periodo,summary,rows,tipoId),
       figures:{principal:primary,complementaria:primary==='gantt'&&options.includes('sedes')?'sedes':''},
       captions:Object.fromEntries(options.map(type=>[type,captionFor(type,summary)])),
       model:''
@@ -170,9 +192,10 @@
     const rows=normalizeRows(data?.rows);
     if(!rows.length)throw Error('Agrega actividades antes de redactar con IA local.');
     const periodo=clean(data.periodo,150)||'seleccionado';
+    const tipoId=data.tipoId||'plan-examen';
     const summary=summarize(rows);
     return {
-      periodo,
+      documento:typeFor(tipoId).nombre,periodo,
       totalActividades:summary.total,
       actividadesConFechas:summary.dated.length,
       totalCarreras:summary.careers.length,
@@ -188,11 +211,11 @@
       )),
       observaciones:clean(data.observaciones,900),
       figurasDisponibles:available(summary),
-      borrador:compose(periodo,summary,rows)
+      borrador:compose(periodo,summary,rows,tipoId)
     };
   }
 
-  const api=Object.freeze({template,textLabels,figureLabels,maxRecords,dateLabel,create,summarize,available,aiInput});
+  const api=Object.freeze({supports,fromDraft,textLabels,figureLabels,maxRecords,dateLabel,create,summarize,available,aiInput});
   if(typeof module==='object'&&module.exports)module.exports=api;
-  if(root)root.UTET_PLAN_EXAMEN=api;
+  if(root)root.UTET_PLANIFICACION=api;
 })(typeof window!=='undefined'?window:null);
