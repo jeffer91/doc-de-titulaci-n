@@ -1,16 +1,30 @@
 'use strict';
 
 (function (root) {
+  // Introducción institucional compartida entre modalidades y períodos.
+  const INTRODUCCION_GENERICA = [
+    "La educación superior tecnológica constituye un componente fundamental para la formación de profesionales con competencias técnicas, científicas, investigativas y humanas, capaces de responder a las necesidades del entorno productivo, social y económico. En este contexto, los procesos de titulación representan una etapa esencial en la trayectoria académica de los estudiantes, debido a que permiten integrar, demostrar y evaluar los conocimientos, habilidades y capacidades desarrollados durante su formación, conforme al perfil de egreso establecido en cada carrera.",
+    "El Instituto Superior Tecnológico Quito Metropolitano (ITSQMET), en cumplimiento de sus funciones académicas y de gestión institucional, promueve el desarrollo de procesos de titulación organizados, transparentes y articulados con los objetivos de formación de sus distintas carreras. Estos procesos requieren una planificación que contemple las particularidades académicas y operativas de las modalidades de titulación, así como la intervención coordinada de los actores responsables de garantizar su adecuada ejecución.",
+    "En este marco, la Unidad de Titulación y Eficiencia Terminal (UTET) tiene entre sus responsabilidades la organización, coordinación, seguimiento y control de las actividades relacionadas con los procesos de titulación. Su gestión comprende la articulación con las coordinaciones de carrera, las unidades académicas, administrativas y tecnológicas, así como con los docentes y estudiantes que participan en las diferentes etapas del proceso. Esta coordinación institucional resulta indispensable para establecer condiciones adecuadas de ejecución, definir responsabilidades, optimizar los recursos disponibles y asegurar el cumplimiento de los procedimientos establecidos.",
+    "La planificación institucional constituye, por tanto, un instrumento técnico y administrativo que permite estructurar las actividades necesarias para el desarrollo de los procesos de titulación, considerando su secuencia, temporalidad, responsables y resultados esperados. Mediante este instrumento se establecen las acciones que deben ejecutarse, los plazos correspondientes, los mecanismos de coordinación entre las unidades participantes y las evidencias que permitirán verificar el cumplimiento de lo programado.",
+    "La presente planificación corresponde al período académico {PERIODO_ACADEMICO} y se desarrolla para el {NOMBRE_DEL_PROCESO}, considerando las disposiciones institucionales aplicables y las necesidades operativas identificadas para su ejecución. Su formulación busca garantizar que las actividades se desarrollen de manera ordenada, oportuna y coherente con el calendario académico, procurando una adecuada distribución de responsabilidades entre las dependencias involucradas.",
+    "Asimismo, la planificación contempla la participación de las distintas carreras, sedes, jornadas y modalidades de estudio de la institución, reconociendo que sus características pueden generar necesidades diferenciadas de organización, coordinación y seguimiento. En consecuencia, las actividades programadas deberán responder tanto a los lineamientos institucionales comunes como a las particularidades de los grupos académicos participantes, manteniendo criterios de equidad, accesibilidad, transparencia y consistencia en la gestión.",
+    "Un aspecto fundamental de este instrumento es la definición de responsabilidades institucionales. La ejecución de los procesos de titulación requiere que cada unidad y actor participante conozca las actividades que le corresponden, los productos que debe generar y los plazos establecidos para su cumplimiento. Esta delimitación favorece la coordinación entre dependencias, reduce la duplicidad de esfuerzos y facilita la identificación oportuna de situaciones que puedan afectar el desarrollo de las actividades previstas.",
+    "De igual manera, el seguimiento constituye un componente transversal de la planificación, debido a que permite verificar el avance de las acciones programadas, identificar posibles retrasos y adoptar medidas de coordinación o ajuste cuando las circunstancias lo requieran. Para ello, se considera necesario disponer de información verificable, registros de ejecución y evidencias documentales que respalden las actividades realizadas, fortaleciendo la trazabilidad y el control de los procedimientos institucionales.",
+    "La comunicación institucional también desempeña un papel relevante en el desarrollo de los procesos de titulación. La difusión oportuna de cronogramas, requisitos, orientaciones y disposiciones permite que estudiantes, docentes y responsables administrativos conozcan las condiciones de participación y las actividades previstas. Por esta razón, la planificación incorpora la necesidad de mantener mecanismos de comunicación oficiales, claros y consistentes, que contribuyan a prevenir confusiones y favorezcan el cumplimiento de las obligaciones académicas y administrativas.",
+    "Finalmente, este documento busca contribuir al fortalecimiento de la gestión académica de la Unidad de Titulación y Eficiencia Terminal mediante una planificación estructurada, verificable y orientada al cumplimiento de los objetivos institucionales. Su aplicación permitirá disponer de una referencia organizada para la ejecución y el seguimiento de las actividades, facilitar la coordinación entre los actores involucrados y generar información útil para la evaluación de los resultados y la mejora continua de los procesos de titulación del Instituto Superior Tecnológico Quito Metropolitano."
+  ].join('\n\n');
+
   const examTemplate = Object.freeze({
     version: '1.0',
-    introduccion: 'La Unidad de Titulación y Eficiencia Terminal organiza la Planificación del Examen Complexivo para orientar la preparación, la evaluación y el seguimiento de esta modalidad. El documento reúne las actividades previstas, sus fechas, los responsables y los entregables de las carreras y grupos que participan en el período académico.',
+    introduccion: INTRODUCCION_GENERICA,
     baseLegal: 'La planificación toma como marco el Reglamento de Régimen Académico del Consejo de Educación Superior, en su texto aplicable al período. En el ámbito institucional, se articula con el Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal, en particular con la planificación semestral, los seminarios complexivos y la ejecución del Examen Complexivo.',
     metodologia: 'Se parte del calendario académico y de la información coordinada con las carreras. Las actividades se organizan por etapa, carrera o grupo, con fechas previstas, responsables, entregables y evidencias de respaldo. La UTET consolida la programación, revisa la coherencia de los datos y remite la planificación a las instancias correspondientes para su validación.',
     referencias: 'Consejo de Educación Superior. Reglamento de Régimen Académico. Resolución RPC-SE-08-No.023-2022 y reformas aplicables al período.\nInstituto Superior Tecnológico Quito Metropolitano. Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal, versión 2.0. Procesos UTET-PRO-56, UTET-PRO-88 y UTET-PRO-93.'
   });
   const workTemplate = Object.freeze({
     version: '1.0',
-    introduccion: 'La Unidad de Titulación y Eficiencia Terminal organiza el Trabajo de Titulación como un proceso de investigación que culmina con la presentación y evaluación de un documento escrito. Esta planificación orienta el desarrollo del trabajo y reúne las etapas, tutorías, revisiones, entregables y actividades de evaluación que correspondan al período académico.',
+    introduccion: INTRODUCCION_GENERICA,
     baseLegal: 'La planificación toma como marco el Reglamento de Régimen Académico del Consejo de Educación Superior, en su texto aplicable al período. En el ámbito institucional, se articula con el Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal en lo relativo a la planificación semestral, el ingreso al Trabajo de Titulación y la ejecución de esta modalidad.',
     metodologia: 'La programación se construye a partir del calendario académico y de la coordinación con las carreras y la Unidad de Investigación e Innovación. Las actividades de formulación, desarrollo, tutoría, revisión, entrega y defensa se registran según el cronograma del período. La UTET revisa las fechas, los responsables y los entregables previstos para facilitar el seguimiento y la validación de la planificación.',
     referencias: 'Consejo de Educación Superior. Reglamento de Régimen Académico. Resolución RPC-SE-08-No.023-2022 y reformas aplicables al período.\nInstituto Superior Tecnológico Quito Metropolitano. Manual de Procesos de la Unidad de Titulación y Eficiencia Terminal, versión 2.0. Procesos UTET-PRO-56, UTET-PRO-96 y UTET-PRO-164.'
@@ -23,6 +37,15 @@
   function typeFor(id) {
     if(!supports(id))throw Error('El documento no tiene un formato de planificación disponible.');
     return types[id];
+  }
+  // Resolver los campos al generar el PDF, también en borradores anteriores.
+  function introductionFor(plan) {
+    const tipoId=plan?.tipoId||'plan-examen';
+    const nombreProceso=typeFor(tipoId).nombre.replace(/^Planificación del /,'');
+    const periodo=clean(plan?.periodo,150)||'seleccionado';
+    return INTRODUCCION_GENERICA
+      .replaceAll('{PERIODO_ACADEMICO}',periodo)
+      .replaceAll('{NOMBRE_DEL_PROCESO}',nombreProceso);
   }
   const fromDraft=draft=>draft?.planificacion||draft?.planExamen||null;
   const textLabels = Object.freeze({
@@ -215,7 +238,7 @@
     };
   }
 
-  const api=Object.freeze({supports,fromDraft,textLabels,figureLabels,maxRecords,dateLabel,create,summarize,available,aiInput});
+  const api=Object.freeze({supports,fromDraft,introductionFor,textLabels,figureLabels,maxRecords,dateLabel,create,summarize,available,aiInput});
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.UTET_PLANIFICACION=api;
 })(typeof window!=='undefined'?window:null);
