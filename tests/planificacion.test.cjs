@@ -17,6 +17,14 @@ const rows=[
   {...common,actividad:'Supletorio',etapa:'Evaluación',ordenEtapa:'3',fechaInicio:'',fechaFin:'',responsable:'',sede:'Sur'}
 ];
 const plan=Plan.create(rows,periodo);
+const introduccion=Plan.introductionFor(plan);
+assert.equal(introduccion.split('\n\n').length,10);
+assert.match(introduccion,/La educación superior tecnológica constituye/);
+assert.match(introduccion,/período académico Abril 2026 a Septiembre 2026/);
+assert.match(introduccion,/para el Examen Complexivo,/);
+assert.doesNotMatch(introduccion,/\{PERIODO_ACADEMICO\}|\{NOMBRE_DEL_PROCESO\}/);
+assert.equal(plan.template.introduccion,Plan.create([],periodo,'plan-trabajo').template.introduccion);
+
 const summary=Plan.summarize(plan.rows);
 assert.deepEqual(Plan.available(summary),['gantt','flujo','sedes']);
 assert.deepEqual(plan.figures,{principal:'gantt',complementaria:'sedes'});
@@ -30,6 +38,7 @@ const simultaneous=Plan.create(rows.slice(0,2).map(row=>({...row,ordenEtapa:'',f
 assert.ok(!Plan.available(Plan.summarize(simultaneous.rows)).includes('flujo'),'Las fechas superpuestas no establecen una secuencia');
 assert.deepEqual(plan.template,Plan.create(rows,'Octubre 2026 a Marzo 2027').template);
 const reopened=JSON.parse(JSON.stringify(plan));
+reopened.template.introduccion='Versión antigua que debe reemplazarse automáticamente.';
 rows[0].actividad='Registro modificado después de preparar el PDF';
 assert.equal(reopened.rows[0].actividad,'Inducción <revisar>');
 
@@ -46,6 +55,8 @@ const draft={
 const html=window.UTET_INSTITUTIONAL.render(draft,type,periodo);
 const headings=['Introducción','Base legal','Metodología','Planificación del período','Programación registrada','Figura 1','Conclusiones','Recomendaciones','Referencias'];
 for(let i=1;i<headings.length;i++)assert.ok(html.indexOf(headings[i-1])<html.indexOf(headings[i]),headings[i]);
+assert.match(html,/La educación superior tecnológica constituye/);
+assert.doesNotMatch(html,/Versión antigua que debe reemplazarse automáticamente/);
 assert.match(html,/data-plan-figure="gantt"/);
 assert.match(html,/data-plan-figure="sedes"/);
 assert.match(html,/Inducción &lt;revisar&gt;/);
@@ -99,6 +110,8 @@ async function run(){
   assert.match(workPlan.text.conclusiones,/1 actividad sin fechas completas/);
   const workHtml=window.UTET_INSTITUTIONAL.render(workDraft,workType,periodo);
   assert.match(workHtml,/UTET-PRO-96 y UTET-PRO-164/);
+  assert.match(workHtml,/para el Trabajo de Titulación,/);
+  assert.doesNotMatch(workHtml,/\{PERIODO_ACADEMICO\}|\{NOMBRE_DEL_PROCESO\}/);
   assert.match(workHtml,/data-plan-figure="gantt"/);
   assert.match(workHtml,/data-plan-figure="sedes"/);
   assert.doesNotMatch(workHtml,/Examen Complexivo/);
