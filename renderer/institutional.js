@@ -134,7 +134,7 @@
     const summary=window.UTET_PLANIFICACION.summarize(plan.rows);
     const figures=window.UTET_PLANIFICACION_FIGURES.render(plan,summary);
     const sections=[
-      {title:'Introducción',text:plan.template.introduccion},
+      {title:'Introducción',text:window.UTET_PLANIFICACION.introductionFor(plan)},
       {title:'Base legal',text:plan.template.baseLegal},
       {title:'Metodología',text:plan.template.metodologia},
       {title:'Planificación del período',text:plan.text.contexto},
